@@ -1,0 +1,42 @@
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugin-dependencies
+app/build/
+app/.gradle/
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/android/build/
+app/android/app/build/
+app/**/*.iml
+app/.idea/
+app/ios/Flutter/ephemeral/
+app/ephemeral/
+**/*.g.dart
+
+# Python / ML
+ml/venv/
+ml/.venv/
+ml/__pycache__/
+**/__pycache__/
+*.pyc
+ml/data/raw/
+ml/models/*.onnx.tmp
+
+# Backend / Supabase
+app/env.json
+backend/supabase/.temp/
+backend/supabase/.branches/
+
+# Secrets
+**/serviceAccountKey.json
+**/service_role_key*
+**/secret_key*
+*.env
+.env
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
