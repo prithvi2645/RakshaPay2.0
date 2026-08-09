@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
+import { BrandMark } from './BrandMark';
 import { ThemeToggle } from './ThemeToggle';
-import { Shield } from './icons';
 
 const NAV = [
   { href: '/', label: 'Home' },
@@ -24,7 +24,7 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
         <Link href="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy text-on-accent">
-            <Shield className="h-5 w-5" />
+            <BrandMark className="h-5 w-5" />
           </span>
           <span className="font-display text-lg font-bold tracking-tight">RakshaPay</span>
         </Link>

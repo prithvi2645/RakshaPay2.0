@@ -88,6 +88,53 @@ class SmsMonitorService {
     return start();
   }
 
+  /// Scores the messages already in the inbox and returns the risky ones.
+  ///
+  /// The live listener only fires while the app is in the foreground, which
+  /// makes it almost impossible to observe on a single phone: you have to leave
+  /// RakshaPay to receive the message, and leaving is exactly what stops the
+  /// listener delivering. Reading the inbox on demand has no such timing
+  /// dependency — and it is the more useful feature anyway, because it covers
+  /// the scam that arrived yesterday, before the app was ever installed.
+  ///
+  /// Bodies are read, scored and dropped. Only the risky ones are surfaced, and
+  /// nothing is uploaded.
+  Future<List<ScamAlert>> scanInbox({int limit = 60}) async {
+    final granted = await requestPermissions();
+    _permissionDenied = !granted;
+    if (!granted) return const [];
+
+    final messages = await _telephony.getInboxSms(
+      columns: [SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE],
+      sortOrder: [OrderBy(SmsColumn.DATE, sort: Sort.DESC)],
+    );
+
+    final found = <ScamAlert>[];
+    for (final message in messages.take(limit)) {
+      final body = message.body;
+      if (body == null || body.isEmpty) continue;
+
+      final result = _engine.analyzeMessage(body, sender: message.address).result;
+      if (result.level == RiskLevel.safe) continue;
+
+      found.add(ScamAlert(
+        body: body,
+        sender: message.address,
+        result: result,
+        receivedAt: message.date != null
+            ? DateTime.fromMillisecondsSinceEpoch(message.date!)
+            : DateTime.now(),
+      ));
+    }
+
+    // Push through the same stream the live listener uses, so these land in
+    // history and the Alerts badge exactly like a message caught in real time.
+    for (final alert in found) {
+      _alertController.add(alert);
+    }
+    return found;
+  }
+
   Future<void> _persist(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_enabledKey, enabled);

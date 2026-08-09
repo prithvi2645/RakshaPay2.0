@@ -20,11 +20,24 @@ class TtsLanguage {
 class TtsService {
   static const _languageKey = 'alert_language';
 
+  /// Ordered by number of speakers, not alphabetically — the list is long
+  /// enough now that the first few entries should be the ones most people
+  /// need. Every code here has translated phrases in AlertPhrases; a language
+  /// with a voice pack but no translation would read English words aloud with
+  /// an Indian accent, which is not localization.
   static const languages = [
     TtsLanguage('en-IN', 'English'),
     TtsLanguage('hi-IN', 'हिंदी (Hindi)'),
-    TtsLanguage('kn-IN', 'ಕನ್ನಡ (Kannada)'),
+    TtsLanguage('bn-IN', 'বাংলা (Bengali)'),
+    TtsLanguage('te-IN', 'తెలుగు (Telugu)'),
     TtsLanguage('mr-IN', 'मराठी (Marathi)'),
+    TtsLanguage('ta-IN', 'தமிழ் (Tamil)'),
+    TtsLanguage('gu-IN', 'ગુજરાતી (Gujarati)'),
+    TtsLanguage('kn-IN', 'ಕನ್ನಡ (Kannada)'),
+    TtsLanguage('ml-IN', 'മലയാളം (Malayalam)'),
+    TtsLanguage('pa-IN', 'ਪੰਜਾਬੀ (Punjabi)'),
+    TtsLanguage('or-IN', 'ଓଡ଼ିଆ (Odia)'),
+    TtsLanguage('ur-IN', 'اردو (Urdu)'),
   ];
 
   final FlutterTts _tts = FlutterTts();

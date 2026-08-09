@@ -40,3 +40,4 @@ backend/supabase/.branches/
 Thumbs.db
 .vscode/
 .idea/
+app/android/.kotlin/

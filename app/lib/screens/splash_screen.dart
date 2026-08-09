@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/brand_mark.dart';
 
 class SplashScreen extends StatelessWidget {
   final String status;
@@ -14,7 +15,9 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.shield_outlined, color: Colors.white, size: 64),
+            // The brand mark, not Material's stock shield — the same two paths
+            // the website and the launcher icon use.
+            const BrandMark(size: 68, color: Colors.white),
             const SizedBox(height: 16),
             Text('RakshaPay', style: AppTheme.heading(28, color: Colors.white)),
             const SizedBox(height: 28),
