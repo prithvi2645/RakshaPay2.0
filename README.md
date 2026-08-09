@@ -2,6 +2,21 @@
 
 **A pre-transaction fraud shield for UPI users.**
 
+**Live: https://rakshapay2-0.onrender.com** — check a payment with nothing installed. The
+models run in the browser tab, so nothing you paste is transmitted.
+
+| | |
+|---|---|
+| Check a payment | https://rakshapay2-0.onrender.com/check |
+| Live threat feed | https://rakshapay2-0.onrender.com/dashboard |
+| Flagged wrongly? Appeal it | https://rakshapay2-0.onrender.com/merchant |
+| Threat-intel API | https://rakshapay2-0.onrender.com/developers |
+
+```bash
+# The API needs no key and is open across origins:
+curl "https://rakshapay2-0.onrender.com/api/v1/lookup?vpa=kyc-refund9931@verifynow"
+```
+
 RakshaPay is a companion layer that sits beside existing UPI apps (Google Pay, PhonePe,
 BHIM, Paytm) and scores the fraud risk of a QR code, a UPI ID, or a payment SMS **before**
 the user enters their UPI PIN.
