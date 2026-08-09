@@ -215,7 +215,12 @@ returns table (reference text, status text, created_at timestamptz)
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $$
+-- Tagged dollar-quote rather than bare $$: a bare one is easy to mangle when
+-- the body is copied through a chat window or an editor that reformats, and the
+-- failure mode is silent — the parser stays inside the string and reports a
+-- syntax error on whatever statement follows, which sends you looking in the
+-- wrong place entirely.
+as $fn$
 declare
   v_appeal public.pattern_appeals;
 begin
@@ -243,7 +248,7 @@ begin
 
   return query select v_appeal.reference, v_appeal.status, v_appeal.created_at;
 end;
-$$;
+$fn$;
 
 grant execute on function public.file_appeal(text, text, text, text) to anon, authenticated;
 
