@@ -200,6 +200,53 @@ create policy pattern_appeals_insert_anon
 
 grant insert on public.pattern_appeals to anon, authenticated;
 
+-- Filing an appeal has to go through a function for the same reason status
+-- lookup does: the merchant needs their reference code back, but the table has
+-- no SELECT policy, so a plain `insert ... returning` is refused with 42501.
+-- Returning the row would require making appeals readable, which is exactly
+-- what must not happen. This inserts and hands back three fields, nothing more.
+create or replace function public.file_appeal(
+  p_vpa       text,
+  p_statement text,
+  p_contact   text default null,
+  p_kind      text default 'vpa'
+)
+returns table (reference text, status text, created_at timestamptz)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_appeal public.pattern_appeals;
+begin
+  -- Validated here as well as by the table constraints: a SECURITY DEFINER
+  -- function bypasses RLS, so it must not rely on the insert policy that no
+  -- longer applies to it.
+  if char_length(btrim(coalesce(p_vpa, ''))) not between 1 and 100 then
+    raise exception 'vpa must be between 1 and 100 characters';
+  end if;
+  if char_length(btrim(coalesce(p_statement, ''))) not between 20 and 2000 then
+    raise exception 'statement must be between 20 and 2000 characters';
+  end if;
+  if p_kind not in ('vpa', 'phone') then
+    raise exception 'kind must be vpa or phone';
+  end if;
+
+  insert into public.pattern_appeals (vpa, kind, statement, contact)
+  values (
+    lower(btrim(p_vpa)),
+    p_kind,
+    btrim(p_statement),
+    nullif(btrim(coalesce(p_contact, '')), '')
+  )
+  returning * into v_appeal;
+
+  return query select v_appeal.reference, v_appeal.status, v_appeal.created_at;
+end;
+$$;
+
+grant execute on function public.file_appeal(text, text, text, text) to anon, authenticated;
+
 -- Status lookup by reference. SECURITY DEFINER because the table has no select
 -- policy; the function returns only the four fields the appellant is entitled
 -- to and never the statement, contact, or any other row.

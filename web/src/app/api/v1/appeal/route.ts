@@ -45,15 +45,25 @@ export async function POST(request: NextRequest) {
     return apiError(400, 'invalid_contact', 'contact must be 200 characters or fewer');
   }
 
-  const { data, error } = await supabase
-    .from('pattern_appeals')
-    .insert({ vpa, kind, statement, contact: contact.length > 0 ? contact : null })
-    .select('reference, status, created_at')
-    .single();
+  // Through file_appeal rather than a direct insert. `pattern_appeals` has no
+  // SELECT policy by design, so `insert(...).select(...)` — which is what
+  // returning the reference code requires — is refused outright with 42501.
+  // Adding a read policy to work around that would make every merchant's appeal
+  // enumerable, which is the thing the design exists to prevent. The function
+  // inserts and hands back three fields.
+  const { data, error } = await supabase.rpc('file_appeal', {
+    p_vpa: vpa,
+    p_statement: statement,
+    p_contact: contact.length > 0 ? contact : null,
+    p_kind: kind,
+  });
 
   if (error) return apiError(502, 'upstream_error', error.message);
 
-  return json({ api_version: API_VERSION, appeal: data }, { status: 201 });
+  const appeal = Array.isArray(data) ? data[0] : data;
+  if (!appeal) return apiError(502, 'upstream_error', 'Appeal was not created');
+
+  return json({ api_version: API_VERSION, appeal }, { status: 201 });
 }
 
 export async function GET(request: NextRequest) {
