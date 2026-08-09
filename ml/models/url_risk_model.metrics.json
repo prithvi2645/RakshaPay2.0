@@ -1,0 +1,65 @@
+{
+  "accuracy": 0.9387568555758684,
+  "benign": {
+    "precision": 0.9095966620305981,
+    "recall": 0.9969512195121951,
+    "f1": 0.9512727272727273
+  },
+  "malicious": {
+    "precision": 0.9946666666666667,
+    "recall": 0.8515981735159818,
+    "f1": 0.9175891758917589
+  },
+  "support": {
+    "benign": 656.0,
+    "malicious": 438.0
+  },
+  "confusion_matrix": {
+    "true_negative": 654,
+    "false_positive": 2,
+    "false_negative": 65,
+    "true_positive": 373
+  },
+  "feature_importance": {
+    "num_labels": 0.3918,
+    "digit_ratio": 0.13255,
+    "max_label_len": 0.12635,
+    "domain_entropy": 0.09462,
+    "is_ip_literal": 0.08491,
+    "host_len": 0.08008,
+    "tld_len": 0.04959,
+    "is_common_tld": 0.02828,
+    "num_hyphens": 0.00546,
+    "has_suspicious_word": 0.00533,
+    "has_punycode": 0.00063,
+    "brand_token_present": 0.00041
+  },
+  "not_just_an_ip_detector": {
+    "note": "60%+ of malicious hosts in the corpus are raw IP literals, which is an easy signal. These two checks show how much of the result survives without it.",
+    "held_out_excluding_ip_hosts": {
+      "accuracy": 0.9209905660377359,
+      "malicious_precision": 0.9844961240310077,
+      "malicious_recall": 0.6614583333333334,
+      "support_malicious": 192.0
+    },
+    "ablation_feature_removed": {
+      "accuracy": 0.9387568555758684,
+      "malicious_precision": 0.9946666666666667,
+      "malicious_recall": 0.8515981735159818
+    }
+  },
+  "corpus": {
+    "total_rows": 5470,
+    "malicious": 2188,
+    "benign": 3282,
+    "malicious_ip_literal_share": 0.6179,
+    "snapshot": "Feeds downloaded at 2026-08-09T12:59:28+00:00"
+  },
+  "qualifications": [
+    "Evaluated on REAL held-out hosts on both sides \u2014 not synthetic.",
+    "Feeds are live; re-running on another date produces a different corpus.",
+    "Benign labels come from Tranco, a POPULARITY list, not a safety list. A popular host is assumed benign unless it also appears in a malicious feed.",
+    "Host-only. The model cannot see a malicious path on an otherwise clean host; that is what the deterministic rules layer is for.",
+    "PhishTank is absent \u2014 its bulk download now requires a registered API key."
+  ]
+}

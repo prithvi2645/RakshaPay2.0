@@ -1,0 +1,27 @@
+{
+  "features": [
+    "host_len",
+    "num_labels",
+    "num_hyphens",
+    "digit_ratio",
+    "max_label_len",
+    "domain_entropy",
+    "is_ip_literal",
+    "has_punycode",
+    "is_common_tld",
+    "tld_len",
+    "brand_token_present",
+    "has_suspicious_word"
+  ],
+  "output_names": [
+    "label",
+    "probabilities"
+  ],
+  "classes": [
+    0,
+    1
+  ],
+  "note": "output[1] gives per-class probabilities; malicious is class label 1",
+  "scope": "HOST features only. Path-level signals (.apk downloads, userinfo '@' tricks, embedded brand names) are handled by deterministic rules in url_rules, not by this model \u2014 the benign reference feed carries bare domains, so a path-aware model trained on it would learn 'has a path => malicious'.",
+  "training_data": "OpenPhish community feed + URLhaus (malicious), Tranco top-1M (benign)"
+}
