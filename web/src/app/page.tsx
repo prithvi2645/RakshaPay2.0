@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { AlarmFatigue } from '@/components/AlarmFatigue';
+import { CompanionBanner } from '@/components/CompanionBanner';
 import { CorrectionDemo } from '@/components/CorrectionDemo';
 import { LiveStatsStrip } from '@/components/LiveStatsStrip';
 import { ParticleField } from '@/components/ParticleField';
@@ -41,9 +42,9 @@ export default function HomePage() {
             </h1>
 
             <p className="fade-up fade-up-2 mt-5 max-w-xl text-lg leading-relaxed text-white/70">
-              RakshaPay puts a check into those ten seconds. Paste a UPI ID, a payment QR, a link,
-              or the message that is rushing you — and get a verdict with its reasoning shown, from
-              the same models the Android app carries, running here in your browser.
+              RakshaPay puts a check into those ten seconds. On Android it does it for you — at the
+              scanner, and on every payment message that arrives. Here, on any phone or laptop with
+              nothing installed, you can check the same things by hand and get the same verdict.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -84,6 +85,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <CompanionBanner />
 
       <section className="bg-ink px-5 pb-12 lg:hidden">
         <div className="mx-auto flex max-w-md justify-center">

@@ -13,12 +13,16 @@ export default function CheckPage() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
       <div className="max-w-2xl">
-        <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          No app on this phone? Check it here
+        </p>
+        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">
           Check it before you pay
         </h1>
         <p className="mt-3 text-base leading-relaxed text-muted">
           No app, no account, no upload. Everything below happens inside this browser tab, so the
-          thing you are worried about never becomes data we hold.
+          thing you are worried about never becomes data we hold — and it is the same RakshaPay
+          that runs on the phone, giving the same verdict.
         </p>
         <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-safe-bg px-3.5 py-1.5 text-xs font-semibold text-safe">
           <LockIcon className="h-3.5 w-3.5" />

@@ -23,6 +23,45 @@ person who scans it:
 Both clients run **the same trained artifacts** and are pinned to the same Python reference
 probabilities at 1e-6, so a verdict on the web and a verdict in the app cannot diverge.
 
+### The web is a companion to the app, not a second product
+
+This is the central design constraint, and it is worth stating explicitly because the two
+surfaces could easily have drifted into two competing products.
+
+**The Android app is the primary surface.** It is the only place protection can be
+*ambient* — happening without the user having to think to ask for it. It reads the QR at
+the camera before any payment app opens it, scores a payment SMS the moment it arrives,
+and speaks the warning aloud. A user who has installed it is protected by default.
+
+**The website exists for the situations the app cannot reach**, and each is a real
+situation rather than a hypothetical one:
+
+- The user is on someone else's phone, or a desktop, and has nothing installed.
+- The user is on iOS, where reading SMS and intercepting a scan are not permissions any
+  app can obtain — so on iPhone the web *is* RakshaPay.
+- The person who needs the system is not a consumer at all: a merchant appealing a flag, a
+  fraud analyst reading the feed, or an engineer at a bank evaluating the API. None of them
+  will install a consumer fraud app to do those things.
+
+That the two are one system is enforced mechanically rather than claimed:
+
+| Guarantee | How it is enforced |
+|---|---|
+| One set of models | `web/public/models` is gitignored and generated at build time from `app/assets/models`. The web client cannot hold its own copy, so the copies cannot drift. |
+| One verdict | Both clients are pinned to the same Python reference fixtures at **1e-6**, and the web suite re-runs the Dart suite's behavioural cases. A divergence fails a test. |
+| One community database | Same Supabase project, tables and RLS policies. A report filed from the browser warns app users, and vice versa. |
+
+**The API is the third consumer of that same engine.** It is documented at `/developers` and
+open across origins with no key, because the most useful place for this intelligence is not
+our app — it is inside the payment flow a user already trusts. An engineer arriving through
+the API gets the same confirmed-pattern data the app reads, and the same reporting and
+appeal paths are reachable over HTTP, so an integrator can contribute intelligence back
+rather than only consuming it.
+
+The surface split is expected to keep evolving as the app grows; the constraint that governs
+every such change is that the web must remain a companion to the app and a door into the
+same engine, never a parallel implementation of it.
+
 ---
 
 ## The problem

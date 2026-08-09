@@ -157,9 +157,15 @@ create table if not exists public.pattern_appeals (
   id              bigint      generated always as identity primary key,
   -- Short human-readable handle the merchant keeps. Status is looked up by
   -- this alone, so it must be unguessable enough that it is not an oracle for
-  -- other merchants' appeals — 12 hex characters from gen_random_bytes.
+  -- other merchants' appeals — 12 hex characters, ~48 bits.
+  --
+  -- Derived from gen_random_uuid() rather than gen_random_bytes() on purpose:
+  -- the latter is pgcrypto, which Supabase installs into the `extensions`
+  -- schema and does NOT put on the SQL Editor's search_path, so this table
+  -- silently failed to create and took every statement after it down with it.
+  -- gen_random_uuid() is core Postgres and needs no extension.
   reference       text        not null unique
-                              default 'RP-' || upper(encode(gen_random_bytes(6), 'hex')),
+                              default 'RP-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 12)),
   vpa             text        not null,
   kind            text        not null default 'vpa' check (kind in ('vpa', 'phone')),
   -- Optional. A merchant who does not want to leave contact details can still
