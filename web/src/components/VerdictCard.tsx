@@ -12,19 +12,19 @@ const TONE: Record<RiskLevel, { bg: string; border: string; text: string; chip: 
     bg: 'bg-safe-bg',
     border: 'border-safe/25',
     text: 'text-safe',
-    chip: 'bg-safe text-white',
+    chip: 'bg-safe text-on-accent',
   },
   caution: {
     bg: 'bg-caution-bg',
     border: 'border-caution/25',
     text: 'text-caution',
-    chip: 'bg-caution text-white',
+    chip: 'bg-caution text-on-accent',
   },
   highRisk: {
     bg: 'bg-danger-bg',
     border: 'border-danger-border',
     text: 'text-danger',
-    chip: 'bg-danger text-white',
+    chip: 'bg-danger text-on-accent',
   },
 };
 

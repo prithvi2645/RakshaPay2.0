@@ -95,7 +95,7 @@ function TabButton({
       onClick={onClick}
       aria-pressed={active}
       className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-        active ? 'bg-navy text-white' : 'border border-navy/15 text-navy/70 hover:border-navy/35'
+        active ? 'bg-navy text-on-accent' : 'border border-navy/15 text-navy/70 hover:border-navy/35'
       }`}
     >
       {children}

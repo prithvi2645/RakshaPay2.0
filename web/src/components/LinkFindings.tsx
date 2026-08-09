@@ -5,9 +5,9 @@ import type { LinkRuleSeverity } from '@/lib/risk/urlRules';
 import { LEVEL_LABEL, type RiskLevel } from '@/lib/risk/types';
 
 const LEVEL_TONE: Record<RiskLevel, string> = {
-  safe: 'bg-safe text-white',
-  caution: 'bg-caution text-white',
-  highRisk: 'bg-danger text-white',
+  safe: 'bg-safe text-on-accent',
+  caution: 'bg-caution text-on-accent',
+  highRisk: 'bg-danger text-on-accent',
 };
 
 const SEVERITY_TONE: Record<LinkRuleSeverity, string> = {

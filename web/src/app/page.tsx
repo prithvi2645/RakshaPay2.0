@@ -1,7 +1,9 @@
 import Link from 'next/link';
 
+import { AlarmFatigue } from '@/components/AlarmFatigue';
 import { CorrectionDemo } from '@/components/CorrectionDemo';
 import { LiveStatsStrip } from '@/components/LiveStatsStrip';
+import { ParticleField } from '@/components/ParticleField';
 import { PaymentStream } from '@/components/PaymentStream';
 import { ScamAnatomy } from '@/components/ScamAnatomy';
 import { ScanInterceptScene } from '@/components/ScanInterceptScene';
@@ -11,14 +13,19 @@ export default function HomePage() {
   return (
     <>
       <section className="relative overflow-hidden bg-ink text-white">
-        <div className="absolute inset-0 opacity-40" aria-hidden>
+        <div className="absolute inset-0 opacity-30" aria-hidden>
           <PaymentStream />
         </div>
-        {/* Keeps the headline readable over whatever the canvas is doing. */}
+        {/* Keeps the headline readable over whatever the canvases are doing. */}
         <div
           aria-hidden
-          className="absolute inset-0 bg-gradient-to-r from-ink via-ink/90 to-ink/60"
+          className="absolute inset-0 bg-gradient-to-r from-ink via-ink/90 to-ink/55"
         />
+        {/* Above the scrim on purpose: the particle links are the layer the
+            cursor interacts with, so dimming them would defeat the effect. */}
+        <div className="absolute inset-0" aria-hidden>
+          <ParticleField />
+        </div>
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:pb-24 lg:pt-24">
           <div>
@@ -42,7 +49,9 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/check"
-                className="btn rounded-xl bg-white px-5 py-3 text-navy hover:bg-white/90"
+                // The hero is dark in both themes, so this button stays literally
+                // white with literally dark text rather than following the palette.
+                className="btn rounded-xl bg-white px-5 py-3 text-ink shadow-lift hover:bg-white/90"
               >
                 Check a payment
               </Link>
@@ -155,11 +164,15 @@ export default function HomePage() {
               Icon={PhoneIcon}
               who="The family member watching over someone"
               gets="The Android app checks incoming payment messages on the phone itself and reads the warning aloud, slowly, in English, Hindi, Kannada or Marathi."
+              href="/check"
+              cta="Try a message check"
             />
             <Party
               Icon={LockIcon}
               who="Whoever has to trust all of this"
               gets="Three separate people must report a payee before anyone is warned about it, reports can never be read back, and only totals are ever published. Those limits are enforced by the database itself."
+              href="/developers"
+              cta="What that means for you"
             />
         </div>
       </section>
@@ -190,6 +203,10 @@ export default function HomePage() {
                 access to your phone, polite wording will not get it past us.
               </Rule>
             </dl>
+
+            <div className="mt-6">
+              <AlarmFatigue />
+            </div>
           </div>
 
           <div className="card">
@@ -226,6 +243,14 @@ export default function HomePage() {
   );
 }
 
+/**
+ * One card per party the problem touches.
+ *
+ * The whole card is the link when there is somewhere to go — a 40px text link
+ * at the bottom of a card is a needlessly small target, and people click cards.
+ * Where there is no destination the card renders as a plain div rather than a
+ * dead link, so nothing looks clickable that is not.
+ */
 function Party({
   Icon,
   who,
@@ -239,22 +264,57 @@ function Party({
   href?: string;
   cta?: string;
 }) {
-  return (
-    <div className="card flex flex-col">
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-navy/8 text-navy">
+  const interactive = Boolean(href && cta);
+
+  const body = (
+    <>
+      {/* Sheen sweeps across on hover. Pointer-events off so it never eats a click. */}
+      {interactive && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-navy/[0.06] to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full motion-reduce:hidden"
+        />
+      )}
+
+      <span
+        className={`relative grid h-10 w-10 place-items-center rounded-xl bg-navy/8 text-navy transition-transform duration-300 ${
+          interactive ? 'group-hover:-translate-y-0.5 group-hover:scale-105' : ''
+        } motion-reduce:transform-none`}
+      >
         <Icon className="h-5 w-5" />
       </span>
-      <h3 className="mt-3.5 font-display text-base font-bold">{who}</h3>
-      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{gets}</p>
-      {href && cta && (
-        <Link
-          href={href}
-          className="mt-4 text-sm font-semibold text-navy underline decoration-navy/25 underline-offset-4 hover:decoration-navy"
-        >
-          {cta} →
-        </Link>
+
+      <h3 className="relative mt-3.5 font-display text-base font-bold">{who}</h3>
+      <p className="relative mt-2 flex-1 text-sm leading-relaxed text-muted">{gets}</p>
+
+      {interactive && (
+        <span className="relative mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-navy">
+          {cta}
+          <span
+            aria-hidden
+            className="transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transform-none"
+          >
+            →
+          </span>
+        </span>
       )}
-    </div>
+    </>
+  );
+
+  const shared =
+    'card group relative flex flex-col overflow-hidden transition duration-300 motion-reduce:transition-none';
+
+  if (!interactive) {
+    return <div className={shared}>{body}</div>;
+  }
+
+  return (
+    <Link
+      href={href!}
+      className={`${shared} hover:-translate-y-1 hover:border-navy/25 hover:shadow-lift focus-visible:-translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-navy/15`}
+    >
+      {body}
+    </Link>
   );
 }
 

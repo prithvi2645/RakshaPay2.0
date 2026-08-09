@@ -19,6 +19,10 @@
     --c-danger-bg: 251 227 227;
     --c-danger-border: 240 180 180;
     --c-muted: 107 114 128;
+    --c-on-accent: 255 255 255;
+
+    --shadow-card: 0 1px 2px rgba(16, 24, 48, 0.04), 0 8px 24px -6px rgba(16, 24, 48, 0.1);
+    --shadow-lift: 0 2px 4px rgba(16, 24, 48, 0.06), 0 22px 48px -12px rgba(16, 24, 48, 0.22);
   }
 
   .dark {
@@ -35,6 +39,13 @@
     --c-danger-bg: 62 24 24;
     --c-danger-border: 122 52 52;
     --c-muted: 148 158 178;
+    /* Accents are pale tints in dark mode, so text on them must go dark. */
+    --c-on-accent: 8 12 28;
+
+    /* inset hairline first: on a dark page the edge does more to separate a
+       card from its background than the drop shadow does. */
+    --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 28px -8px rgba(0, 0, 0, 0.6);
+    --shadow-lift: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 26px 56px -14px rgba(0, 0, 0, 0.75);
   }
 
   html {
@@ -65,7 +76,7 @@
   }
 
   .btn-primary {
-    @apply btn bg-navy text-white hover:bg-ink;
+    @apply btn bg-navy text-on-accent hover:bg-ink;
   }
 
   .btn-ghost {
@@ -167,6 +178,32 @@
   .badge-in,
   .pulse-soft {
     animation: none;
+  }
+}
+
+/* Bell shake when an alert fires in the alarm-fatigue demo. */
+@keyframes bell-shake {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-11deg);
+  }
+  40% {
+    transform: rotate(9deg);
+  }
+  60% {
+    transform: rotate(-6deg);
+  }
+  80% {
+    transform: rotate(3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*='bell-shake'] {
+    animation: none !important;
   }
 }
 

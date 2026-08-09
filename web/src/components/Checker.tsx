@@ -261,7 +261,7 @@ export function Checker() {
               aria-pressed={mode === id}
               className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
                 mode === id
-                  ? 'bg-navy text-white'
+                  ? 'bg-navy text-on-accent'
                   : 'border border-navy/15 text-navy/70 hover:border-navy/35'
               }`}
             >
@@ -503,7 +503,7 @@ function QrDropzone({ onFile, decoding }: { onFile: (file: File) => void; decodi
 function RejectedPayload({ check, payload }: { check: QrPayloadCheck; payload: string }) {
   return (
     <div className="card border-caution/25 bg-caution-bg">
-      <span className="pill bg-caution text-white">
+      <span className="pill bg-caution text-on-accent">
         <AlertIcon className="h-3.5 w-3.5" />
         Not scored
       </span>

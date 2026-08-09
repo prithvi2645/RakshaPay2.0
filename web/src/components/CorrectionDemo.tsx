@@ -173,13 +173,17 @@ function Choice({
             aria-pressed={value === option.id}
             className={`rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
               value === option.id
-                ? 'bg-navy text-white'
+                ? 'bg-navy text-on-accent'
                 : 'border border-navy/15 text-navy/70 hover:border-navy/35'
             }`}
           >
             <span className="block font-mono">{option.label}</span>
             {option.caption && (
-              <span className={`block text-[10px] font-medium ${value === option.id ? 'text-white/70' : 'text-muted'}`}>
+              <span
+                className={`block text-[10px] font-medium ${
+                  value === option.id ? 'text-on-accent/70' : 'text-muted'
+                }`}
+              >
                 {option.caption}
               </span>
             )}
@@ -225,10 +229,10 @@ function Step({
 function VerdictPill({ level, score }: { level: RiskLevel; score: number }) {
   const tone =
     level === 'safe'
-      ? 'bg-safe text-white'
+      ? 'bg-safe text-on-accent'
       : level === 'caution'
-        ? 'bg-caution text-white'
-        : 'bg-danger text-white';
+        ? 'bg-caution text-on-accent'
+        : 'bg-danger text-on-accent';
   return (
     <span className={`pill ${tone} transition-colors duration-500 motion-reduce:transition-none`}>
       {LEVEL_LABEL[level]} · {score}/100 risk

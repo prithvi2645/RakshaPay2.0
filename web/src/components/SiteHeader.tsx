@@ -23,7 +23,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-line/10 bg-canvas/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
         <Link href="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy text-white">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-navy text-on-accent">
             <Shield className="h-5 w-5" />
           </span>
           <span className="font-display text-lg font-bold tracking-tight">RakshaPay</span>

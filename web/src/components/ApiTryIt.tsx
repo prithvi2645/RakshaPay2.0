@@ -39,7 +39,7 @@ export function ApiTryIt() {
             onClick={() => setPath(endpoint.path)}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
               path === endpoint.path
-                ? 'bg-navy text-white'
+                ? 'bg-navy text-on-accent'
                 : 'border border-navy/15 text-navy/70 hover:border-navy/35'
             }`}
           >

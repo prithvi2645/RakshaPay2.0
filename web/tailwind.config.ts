@@ -18,6 +18,10 @@ const config: Config = {
         canvas: v('--c-canvas'),
         surface: v('--c-surface'),
         line: v('--c-line'),
+        // Text that sits ON a filled accent (navy / safe / caution / danger).
+        // It has to invert with the palette: `bg-navy text-white` is correct in
+        // light mode and invisible in dark, where navy becomes a pale tint.
+        'on-accent': v('--c-on-accent'),
         safe: v('--c-safe'),
         'safe-bg': v('--c-safe-bg'),
         caution: v('--c-caution'),
@@ -28,8 +32,11 @@ const config: Config = {
         muted: v('--c-muted'),
       },
       boxShadow: {
-        card: '0 6px 18px rgba(0, 0, 0, 0.08)',
-        lift: '0 12px 34px rgba(22, 34, 74, 0.12)',
+        // Through variables because a shadow tuned for a white page is
+        // invisible on a dark one — dark mode needs a deeper, tighter shadow
+        // plus a hairline highlight to give a card any edge at all.
+        card: 'var(--shadow-card)',
+        lift: 'var(--shadow-lift)',
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
