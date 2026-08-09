@@ -4,6 +4,7 @@ import '../models/risk_result.dart';
 import '../models/scan_record.dart';
 import '../services/risk_engine.dart';
 import '../services/scan_history_service.dart';
+import '../services/sms_monitor_service.dart';
 import '../theme/app_theme.dart';
 import 'alerts_screen.dart';
 import 'manual_check_screen.dart';
@@ -14,7 +15,13 @@ import 'settings_screen.dart';
 class HomeScreen extends StatefulWidget {
   final RiskEngine engine;
   final ScanHistoryService history;
-  const HomeScreen({super.key, required this.engine, required this.history});
+  final SmsMonitorService smsMonitor;
+  const HomeScreen({
+    super.key,
+    required this.engine,
+    required this.history,
+    required this.smsMonitor,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -31,7 +38,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _HomeTab(engine: widget.engine, history: widget.history, onChanged: _refresh),
       AlertsScreen(history: widget.history),
       const SizedBox.shrink(), // scan handled via push, not a tab body
-      SettingsScreen(engine: widget.engine),
+      SettingsScreen(
+        engine: widget.engine,
+        history: widget.history,
+        smsMonitor: widget.smsMonitor,
+        onHistoryCleared: _refresh,
+      ),
     ];
 
     return Scaffold(

@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 
 import '../services/risk_engine.dart';
+import '../services/scan_history_service.dart';
 import '../services/sms_monitor_service.dart';
 import '../services/tts_service.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
   final RiskEngine engine;
-  const SettingsScreen({super.key, required this.engine});
+  final ScanHistoryService history;
+  final SmsMonitorService smsMonitor;
+  final VoidCallback? onHistoryCleared;
+
+  const SettingsScreen({
+    super.key,
+    required this.engine,
+    required this.history,
+    required this.smsMonitor,
+    this.onHistoryCleared,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -16,9 +27,12 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _tts = TtsService();
   String _language = TtsService.languages.first.code;
-  bool _smsWatching = false;
   bool _syncing = false;
-  late final SmsMonitorService _smsMonitor = SmsMonitorService(widget.engine);
+
+  // Read from the shared service rather than a local copy, so the switch shows
+  // what is actually running instead of resetting every time this screen is
+  // rebuilt.
+  bool get _smsWatching => widget.smsMonitor.isWatching;
 
   @override
   void initState() {
@@ -32,12 +46,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _toggleSms(bool value) async {
-    if (value) {
-      final ok = await _smsMonitor.start();
-      if (mounted) setState(() => _smsWatching = ok);
-    } else {
-      setState(() => _smsWatching = false);
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (!value) {
+      await widget.smsMonitor.stop();
+      if (mounted) setState(() {});
+      return;
     }
+
+    final ok = await widget.smsMonitor.start();
+    if (!mounted) return;
+    setState(() {});
+
+    // A switch that silently flips back is indistinguishable from a broken
+    // feature, which is exactly how this read before.
+    if (!ok) {
+      messenger.showSnackBar(const SnackBar(
+        content: Text(
+          'SMS permission was denied. Grant it in Settings → Apps → RakshaPay → Permissions to let RakshaPay check incoming messages.',
+        ),
+        duration: Duration(seconds: 6),
+      ));
+    }
+  }
+
+  Future<void> _clearHistory() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear scan history?'),
+        content: const Text(
+          'This deletes every check stored on this phone, including message alerts. It cannot be undone.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await widget.history.clear();
+    widget.onHistoryCleared?.call();
+    if (!mounted) return;
+    setState(() {});
+    messenger.showSnackBar(const SnackBar(content: Text('Scan history cleared.')));
   }
 
   @override
@@ -112,6 +171,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (mounted) setState(() => _syncing = false);
                         },
                   child: Text(_syncing ? 'Syncing...' : 'Sync now'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          _SectionLabel('Your data'),
+          Container(
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: kCardShadow),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${widget.history.records.length} checks stored on this phone',
+                          style: AppTheme.body(13.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: widget.history.records.isEmpty ? null : _clearHistory,
+                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Clear scan history'),
+                    ),
+                  ),
                 ),
               ],
             ),

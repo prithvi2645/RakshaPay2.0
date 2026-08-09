@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,8 +8,11 @@ import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/permissions_screen.dart';
 import 'screens/splash_screen.dart';
+import 'models/scan_record.dart';
 import 'services/risk_engine.dart';
 import 'services/scan_history_service.dart';
+import 'services/scam_text_matcher.dart';
+import 'services/sms_monitor_service.dart';
 import 'supabase_options.dart';
 import 'theme/app_theme.dart';
 
@@ -52,6 +57,11 @@ class _BootstrapState extends State<_Bootstrap> {
 
   final _engine = RiskEngine();
   final _history = ScanHistoryService();
+  // Owned here, for the lifetime of the app. It used to live inside the
+  // Settings screen's state, so it was destroyed the moment the user navigated
+  // away and nothing ever listened to its alerts.
+  late final SmsMonitorService _smsMonitor = SmsMonitorService(_engine);
+  StreamSubscription<ScamAlert>? _alertSubscription;
 
   _Stage _stage = _Stage.loading;
   String _status = 'Loading protection...';
@@ -65,8 +75,31 @@ class _BootstrapState extends State<_Bootstrap> {
 
   @override
   void dispose() {
+    _alertSubscription?.cancel();
+    _smsMonitor.dispose();
     _engine.dispose();
     super.dispose();
+  }
+
+  /// A flagged message becomes a record in the same history the Alerts tab
+  /// already renders. Without this the monitor scored messages into a stream
+  /// nobody read, which is indistinguishable from it not working at all.
+  void _recordAlert(ScamAlert alert) {
+    final vpa = ScamTextMatcher.extractVpa(alert.body) ?? alert.sender ?? 'Unknown sender';
+    _history.add(ScanRecord(
+      merchantName: alert.sender,
+      vpa: vpa,
+      amount: null,
+      level: alert.result.level,
+      score: alert.result.score,
+      scannedAt: alert.receivedAt,
+      source: 'sms',
+      // Truncated: the Alerts list needs enough to recognise the message, and
+      // the full body has no business being persisted.
+      preview: alert.body.length > 140 ? '${alert.body.substring(0, 140)}…' : alert.body,
+      reasons: alert.result.reasons,
+    ));
+    if (mounted) setState(() {});
   }
 
   Future<void> _boot() async {
@@ -76,6 +109,11 @@ class _BootstrapState extends State<_Bootstrap> {
 
       setState(() => _status = 'Loading your history...');
       await _history.load();
+
+      _alertSubscription = _smsMonitor.alerts.listen(_recordAlert);
+      // Re-arm the SMS watcher if the user had already turned it on. It is
+      // best-effort: a refused permission must not stop the app booting.
+      unawaited(_smsMonitor.restoreIfEnabled());
 
       final prefs = await SharedPreferences.getInstance();
       final seen = prefs.getBool(_seenOnboardingKey) ?? false;
@@ -103,7 +141,7 @@ class _BootstrapState extends State<_Bootstrap> {
       _Stage.loading => SplashScreen(status: _status),
       _Stage.onboarding => OnboardingScreen(onDone: () => setState(() => _stage = _Stage.permissions)),
       _Stage.permissions => PermissionsScreen(onDone: _finishOnboarding),
-      _Stage.home => HomeScreen(engine: _engine, history: _history),
+      _Stage.home => HomeScreen(engine: _engine, history: _history, smsMonitor: _smsMonitor),
       _Stage.failed => _buildFailure(),
     };
   }

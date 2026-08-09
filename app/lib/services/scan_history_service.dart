@@ -40,6 +40,14 @@ class ScanHistoryService {
     await prefs.setStringList(_key, _records.map((r) => r.encode()).toList());
   }
 
+  /// Wipes local history. The records name the merchants a user pays, so being
+  /// able to delete them is part of the privacy promise, not a convenience.
+  Future<void> clear() async {
+    _records = [];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_key);
+  }
+
   int get scansToday {
     final now = DateTime.now();
     return _records.where((r) => r.scannedAt.year == now.year && r.scannedAt.month == now.month && r.scannedAt.day == now.day).length;
