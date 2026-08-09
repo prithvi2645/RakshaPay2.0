@@ -10,6 +10,19 @@ It does not process payments, hold funds, or replace any UPI app or bank. It rea
 locally available signals, scores risk **on-device**, and warns the user in their own
 language.
 
+It ships as **four surfaces over one backend**, because a scam QR does not only touch the
+person who scans it:
+
+| Surface | Who it is for | What it does |
+|---|---|---|
+| **Android app** (`app/`) | The person mid-payment | Scans the QR, reads payment SMS, speaks the warning aloud in four languages |
+| **Web checker** (`web/check`) | Anyone, with nothing installed | QR, UPI ID, message and link checks, all running in the browser tab via WASM |
+| **Merchant appeal** (`web/merchant`) | A payee flagged wrongly | Public lookup, a reviewed appeal with a reference code, and a flag-clearing outcome |
+| **Threat feed + API** (`web/dashboard`, `/api/v1/*`) | Analysts, banks, other UPI apps | Live confirmed patterns and an open, documented JSON API |
+
+Both clients run **the same trained artifacts** and are pinned to the same Python reference
+probabilities at 1e-6, so a verdict on the web and a verdict in the app cannot diverge.
+
 ---
 
 ## The problem
@@ -72,7 +85,48 @@ Reports carry a **random per-install token**, not a hardware or advertising ID. 
 purely so the database can count distinct devices; it identifies nothing about the user or
 the handset and is discarded on uninstall.
 
-### 4. It speaks to the user who is actually at risk
+### 4. It follows the scam into the link
+
+Wording and payee checks miss the most common delivery mechanism in Indian UPI fraud: a message
+whose entire payload is a URL. `KYC pending. Update here: bit.ly/3xKq2 -SBI` asks for nothing in
+its text, so a text-only pipeline correctly declines to alarm — and misses the attack.
+
+The link layer is deliberately split in two:
+
+- **A trained model over the host**, with 12 structural features. It reads the host *only*, which
+  is a guard rather than a simplification: the malicious feeds supply full URLs with long paths and
+  the benign reference supplies bare domains, so a path-aware model trained on them would learn
+  "has a path ⇒ malicious", score ~99%, and collapse on the first real benign URL with a path.
+- **Deterministic rules over the whole URL** for what a host cannot show: `.apk` downloads, the
+  `@`-in-authority trick (`https://sbi.co.in@evil.tld`), punycode look-alikes, brand names on
+  domains that do not own them, dynamic-DNS hosts, throwaway TLDs. These need no training data and
+  each is individually defensible.
+
+A dangerous link is then treated as a **fraud ask**, not as extra wording evidence — it is asking
+the reader to *do* something — so it lifts a message past the no-ask cap exactly as an OTP request
+would. A merely unusual link does not, or every newsletter with a tracking domain becomes an alert.
+
+**We never fetch a link to judge it.** That request would confirm to the sender that their message
+reached a real person. Shortened links therefore stay unresolved, and are never called safe,
+because we genuinely do not know where they go.
+
+### 5. The people it flags get a way out
+
+Any system that flags people will sometimes flag the wrong one, and for a small merchant a
+wrongly flagged UPI ID is lost income for as long as the flag stands. So recourse is part
+of the schema, not a support address:
+
+- `web/merchant` looks the payee up against the public confirmed list and files an appeal,
+  returning a reference code. Contact details are optional — the reference alone tracks it.
+- `appeal_status(reference)` is a `SECURITY DEFINER` function returning six fields for one
+  reference. The table has no SELECT policy, so appeals cannot be enumerated.
+- An upheld appeal clears the flag **and** sets `overturned`, so later reports cannot
+  silently re-activate a pattern that has already been reviewed and cleared.
+- The open/upheld/rejected counts are published in `live_stats` and on the dashboard. How
+  often the system flags the wrong payee is the number a fraud tool is least inclined to
+  show, and the one that most deserves to be public.
+
+### 6. It speaks to the user who is actually at risk
 
 Voice alerts in **English, Hindi, Kannada, and Marathi** — actual translated sentences, not
 just a locale switch. If the device lacks a voice pack for the selected language, it falls
@@ -116,39 +170,77 @@ The model learns the structural heuristics a human analyst would use (entropy, k
 suffix, digit ratio, pre-filled amount), so its accuracy reflects how well it learned those
 rules — not real-world fraud-catch rate. We report it as such.
 
+### Link-risk model — measured on **real** hosts on both sides
+
+| Class | Precision | Recall | F1 | Support |
+|---|---|---|---|---|
+| Benign | 91% | 100% | 95% | 656 |
+| **Malicious** | **99%** | **85%** | **92%** | 438 |
+| **Overall accuracy** | | | **94%** | 1,094 |
+
+Trained on live OpenPhish + URLhaus hosts against the Tranco top-1M. This is the first model here
+whose headline number describes measured behaviour on real adversarial data rather than learned
+structural rules.
+
+**Three qualifications we publish rather than bury** — all recorded in
+`ml/models/url_risk_model.metrics.json`:
+
+1. **The honest recall is 66%, not 85%.** 62% of malicious hosts in the corpus are raw IP
+   addresses, which are trivially detectable. On the held-out subset with those removed — real
+   phishing *domains*, the kind that arrive in an SMS — recall is **66% at 98% precision**. An
+   ablation with the feature deleted entirely scores 93.9%, confirming the model is not merely an
+   IP detector, but the domain-only number is the one that describes field behaviour. High
+   precision is the deliberate trade: a false alarm is treated as a safety failure.
+2. **Benign labels come from a popularity list, not a safety list.** Tranco ranks how popular a
+   domain is. A host is treated as benign unless it also appears in a malicious feed; 12
+   overlapping hosts were dropped rather than double-counted.
+3. **The feeds are live, so the corpus is not byte-reproducible.** Re-running trains on a different
+   set of URLs. The snapshot behind these numbers is recorded in the metrics file, and the download
+   step is scripted so anyone can produce their own. PhishTank is absent — its bulk download now
+   requires a registered API key, and a dataset step nobody else can re-run is worse than one
+   source fewer.
+
 ---
 
 ## Architecture
 
 ```
-   QR scan  ·  QR image  ·  SMS  ·  typed UPI ID
-                      │
-                      ▼
-        ┌─────────────────────────────┐
-        │   On-device Risk Engine     │   ← nothing leaves the phone
-        │                             │
-        │  QR/VPA model (ONNX)        │
-        │  Scam-text model (Dart)     │
-        │        ↓                    │
-        │  Sender reputation ×0.25    │
-        │  Fraud-ask gating (cap 55)  │
-        │        ↓                    │
-        │  Community override → 100   │
-        └─────────────────────────────┘
-                      │
-         ┌────────────┴────────────┐
-         ▼                         ▼
-   Risk verdict + voice      Local history
-   (Safe / Caution /         (never synced)
-    High Risk)
-                      │
-                      ▼  only if the user chooses to report
-        ┌─────────────────────────────┐
-        │  Supabase Postgres          │
-        │  reports → trigger →        │
-        │  scam_patterns (3 devices)  │
-        │  RLS: insert-only reports   │
-        └─────────────────────────────┘
+   Android app                          Web (Next.js on Vercel)
+   QR scan · SMS · typed UPI ID         QR image · payload · UPI ID · pasted message
+              │                                        │
+              ▼                                        ▼
+   ┌─────────────────────────┐            ┌─────────────────────────┐
+   │  Risk engine (Dart)     │            │  Risk engine (TypeScript)│
+   │  ONNX Runtime Mobile    │            │  ONNX Runtime Web (WASM) │
+   └───────────┬─────────────┘            └───────────┬─────────────┘
+               │      same artifacts, pinned to 1e-6  │
+               └──────────────────┬───────────────────┘
+                                  ▼
+                  ┌───────────────────────────────┐
+                  │  QR/VPA model  ·  text model  │  ← nothing leaves the device
+                  │            ↓                  │
+                  │  Sender reputation ×0.25/1.15 │
+                  │  Fraud-ask gate: cap 55/floor 60
+                  │            ↓                  │
+                  │  Community override → 100     │
+                  └───────────────┬───────────────┘
+                                  │
+        ┌─────────────────────────┼─────────────────────────┐
+        ▼                         ▼                         ▼
+  Risk verdict + voice      Local history          only if the user reports
+  (Safe/Caution/High)       (never synced)                  │
+                                                            ▼
+                            ┌───────────────────────────────────────────┐
+                            │  Supabase Postgres                        │
+                            │  reports → trigger → scam_patterns (3 dev)│
+                            │  pattern_appeals → resolve_appeal()       │
+                            │  RLS: insert-only, active-only reads      │
+                            └───────────────┬───────────────────────────┘
+                                            ▼
+                            active_patterns · live_stats views
+                                            ▼
+                        /api/v1/{lookup,patterns,stats,appeal}
+                        consumed by the dashboard, banks, other UPI apps
 ```
 
 ### Why the text model isn't ONNX
@@ -170,8 +262,10 @@ within **1e-6**, so the phone and the training pipeline can never silently diver
 | Layer | Technology | Why |
 |---|---|---|
 | Mobile app | Flutter (Android) | Single codebase; SMS and QR access require Android |
-| QR/VPA inference | RandomForest → ONNX Runtime Mobile | Converts cleanly via skl2onnx; float tensors work reliably |
-| Text inference | TF-IDF + LogisticRegression, evaluated in Dart | Linear ⇒ exact port; avoids ONNX string-tensor crash risk |
+| Web | Next.js 15 · React 19 · TypeScript · Tailwind | Static pages plus route handlers for the API; deploys to Vercel with no server to manage |
+| QR/VPA inference | RandomForest → ONNX Runtime Mobile / Web (WASM) | One `.onnx` artifact runs on both clients; converts cleanly via skl2onnx |
+| Text inference | TF-IDF + LogisticRegression, evaluated in Dart and TypeScript | Linear ⇒ exact port; avoids ONNX string-tensor crash risk |
+| QR image decode (web) | `jsqr` on a canvas | Decoding happens in the tab — the image is never uploaded |
 | Training | Python · scikit-learn · pandas · skl2onnx | Standard, reproducible, fully scripted |
 | Voice | Android TTS via `flutter_tts` | On-device; works offline |
 | Backend | Supabase (Postgres + RLS + trigger) | Aggregation runs *inside* the database — no server to deploy or keep awake |
@@ -183,10 +277,15 @@ within **1e-6**, so the phone and the training pipeline can never silently diver
 
 ```
 app/       Flutter Android app — capture, on-device inference, alerts, TTS
+web/       Next.js site — browser checker, merchant appeals, threat feed, public API
 ml/        Python training pipeline for both models
-backend/   Supabase Postgres schema, aggregation trigger, RLS policies
+backend/   Supabase Postgres schema, aggregation trigger, RLS policies, appeals
 docs/      Architecture and design decisions
 ```
+
+`web/public/models` is **generated, not committed**: `web/scripts/sync-assets.mjs` copies
+the trained artifacts from `app/assets/models` before every dev run and build. Two copies
+of a model file are two copies that can drift apart, which would defeat the parity test.
 
 ---
 
@@ -210,6 +309,11 @@ python ml/src/train_text_model.py        # -> ml/models/scam_text_model.joblib
 python ml/src/train_risk_model.py        # -> ml/models/qr_risk_model.onnx
 python ml/src/export_text_weights.py     # -> app/assets/models/scam_text_model.json
 python ml/src/export_parity_fixtures.py  # -> app/test/fixtures/
+
+python ml/src/download_url_datasets.py   # OpenPhish + URLhaus + Tranco (live feeds)
+python ml/src/build_url_dataset.py       # -> ml/data/url_risk_dataset.csv
+python ml/src/train_url_model.py         # -> ml/models/url_risk_model.onnx (+ stages into app/)
+python ml/src/export_url_fixtures.py     # -> app/test/fixtures/url_feature_parity.json
 ```
 
 ### 2. Backend
@@ -236,6 +340,36 @@ RLS policy.
 Without `env.json` the app still builds and runs; it simply has no community sync, since
 all scoring happens on-device regardless.
 
+**Do not use `flutter run` from an IDE.** It drops the ONNX native library, so the risk
+engine fails to start. Build the APK and install it:
+
+```bash
+adb uninstall com.rakshapay.app; adb install build/app/outputs/flutter-apk/app-debug.apk
+```
+
+### 4. Web
+
+```bash
+cd web
+cp .env.example .env.local        # same Supabase URL + publishable key as the app
+npm install
+npm test                          # 30 tests, including 1e-6 parity with Python
+npm run dev                       # http://localhost:3000
+```
+
+`npm run dev` and `npm run build` both run `scripts/sync-assets.mjs` first, which copies
+the two models and the ONNX Runtime WASM binaries into `web/public/`.
+
+Leaving `.env.local` unset is a supported configuration, and the same one the app has
+without `env.json`: every page still builds and every risk verdict still works, because
+scoring is entirely local. Only the community layer goes quiet, and each surface says so
+plainly — the API answers `503 backend_unconfigured` rather than returning empty data that
+would read as "nothing reported".
+
+**Deploying to Vercel:** import the repository, set **Root Directory** to `web`, and add
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_KEY` as environment variables. The
+build command and output are Next.js defaults; no other configuration is needed.
+
 ---
 
 ## Privacy
@@ -253,19 +387,35 @@ Row Level Security enforces this server-side, not by app convention:
   can never read them back, and neither can we from any client.
 - `scam_patterns` exposes **only rows where `active = true`**, so nothing below the
   3-device threshold is visible to anyone.
+- `pattern_appeals` is insert-only too. Status lookup goes through a `SECURITY DEFINER`
+  function keyed on the reference code, returning six fields for one row — so one merchant
+  can never read another's appeal, statement, or contact details.
 - Local scan history is never synced at all — it reveals which merchants a user pays.
+
+On the web the same rules hold, and the surface is smaller than it looks: QR images are
+decoded on a canvas in the tab, model inference runs in WASM, and the per-browser reporter
+token is 24 random bytes in `localStorage` — not a fingerprint and not derived from
+anything about the browser or the machine.
 
 ---
 
 ## Testing
 
 ```bash
-cd app && flutter test
+cd app && flutter test     # 25 tests
+cd web && npm test         # 78 tests
 ```
 
-25 tests covering:
+**103 tests across the two clients**, and deliberately overlapping: the web suite re-runs the
+same false-positive cases, the same fraud-signal cases, and the same feature-order assertion
+as the Dart suite, against the same fixture file. Two clients that each pass their own
+hand-written tests can still disagree with each other; pinning both to one set of Python
+reference probabilities is what makes that impossible.
 
-- **Model parity** — Dart TF-IDF output pinned to Python's `predict_proba` within 1e-6
+They cover:
+
+- **Model parity** — Dart *and* TypeScript TF-IDF output pinned to Python's `predict_proba`
+  within 1e-6, from one shared fixture file
 - **False-positive regression** — real Indian bank, telecom, and e-commerce SMS must not
   alert; real scam patterns must
 - **Feature-order guard** — Dart feature extraction must stay in lockstep with the

@@ -24,6 +24,11 @@ read reports back or bypass the report threshold.
 warnings. Precision on legitimate traffic is treated as a primary requirement, not a
 secondary metric.
 
+**A surface exists because the problem has it.** Four clients ship — app, web checker,
+merchant appeal, analyst feed and API — and each maps to a party the fraud actually
+touches. None of them is a variant of another for presentation's sake; remove any one and a
+real person loses their only way in.
+
 ---
 
 ## 2. The risk pipeline
@@ -94,6 +99,130 @@ the Dart implementation matches within **1e-6**.
 A threshold test ("scam scores above 0.7") would not catch subtle drift — a wrong n-gram
 boundary or a missing sublinear-tf transform still lands on the right side of 0.7. Pinning
 exact probabilities makes any divergence fail loudly.
+
+---
+
+## 3-bis. The link layer, and the leak it is designed around
+
+The obvious way to build a link classifier is to train on full URLs: phishing feeds against a
+benign reference list. It scores about 99% and it is worthless.
+
+URLhaus and OpenPhish publish full URLs with long paths. Tranco publishes bare domains. Train on
+those directly and the strongest available signal is *path length*, so the model learns "has a path
+⇒ malicious". Every real benign URL with a path is then a false positive, and the 99% describes an
+artefact of how two feeds are formatted.
+
+Restricting the trained model to **host features** makes both classes structurally comparable — a
+host is a host in either feed. That is why `ml/src/url_features.py` exposes 12 host features and
+nothing path-derived, and why the docstring says so at the top rather than in a commit message.
+
+What the host cannot see is handled by **deterministic rules** over the whole URL, in
+`urlRules.ts`: `.apk` and executable downloads, the `@`-in-authority trick, punycode, brand tokens
+on domains that do not own them, dynamic DNS, throwaway TLDs, shorteners, non-standard ports. They
+carry a severity (`severe` / `strong` / `mild`) and a written explanation each, need no training
+corpus, and cannot age the way a model does.
+
+Rules override the model in both directions. A single `severe` rule floors the score at 90 — an
+APK-download link does not become safe because it sits on a host the model has never seen. The
+shortener rule instead sets a *floor* of 40: a shortened link can never be called safe, because we
+deliberately do not follow it and therefore genuinely do not know where it goes. Calling something
+safe that we chose not to look at would be the one dishonest verdict in the system.
+
+**Links are folded into a message as an ask, not as evidence.** `mergeLinkIntoMessage` treats a
+high-risk link the way a credential request is treated — floor of 60, clearing the no-ask cap of 55
+— because a link that installs an APK is asking the reader to *do* something. A merely unusual link
+gets no such lift, or every newsletter with a tracking domain becomes an alert. That function is
+pure and exported precisely so this judgement is testable without a WASM runtime.
+
+`analyzeText` stays synchronous and stays a character-for-character match with the Dart engine;
+link scoring needs ONNX and therefore an await, so it composes on top rather than being folded in.
+The parity tests keep meaning what they say.
+
+## 3a. Two clients, one set of artifacts
+
+`web/src/lib/risk` is a direct port of `app/lib/services`: the same regex patterns, the same
+multipliers, the same gate, the same band boundaries. That duplication is a real risk — a
+correction fixed on one client and forgotten on the other produces two products that
+disagree about whether a payment is safe, which is worse than either being wrong alone.
+
+Three things hold them together:
+
+**One copy of each model.** `web/scripts/sync-assets.mjs` copies `scam_text_model.json` and
+`qr_risk_model.onnx` out of `app/assets/models` before every web build, and
+`web/public/models` is gitignored. There is no second checked-in copy that can drift.
+
+**One fixture file.** `app/test/fixtures/text_model_parity.json` is generated from the
+Python pipeline and read by *both* `text_model_parity_test.dart` and the web
+`parity.test.ts`. Each client is pinned to Python at 1e-6, so they are transitively pinned
+to each other.
+
+**Overlapping behavioural tests.** The web suite re-runs the same six legitimate Indian SMS,
+the same four scams, and the same feature-order assertion as the Dart suite. Passing your
+own tests is not evidence of agreeing with the other client; running the other client's
+tests is.
+
+The QR model needs no port at all — the identical `.onnx` file runs through ONNX Runtime
+Mobile on Android and ONNX Runtime Web (WASM) in the browser. Only the seven-feature
+extraction is reimplemented, and that is exactly what the feature-order test guards.
+
+The web runtime is single-threaded WASM on purpose. Threaded ORT requires `SharedArrayBuffer`,
+which requires COOP/COEP cross-origin isolation headers on every page that embeds the
+checker — a real constraint on anyone wanting to drop this into their own site, in exchange
+for nothing measurable on a seven-feature forest.
+
+---
+
+## 3b. Recourse for the wrongly flagged
+
+The community database can flag a real merchant. Three people acting in bad faith, or three
+people who each genuinely believed they were scammed by a payee who was not at fault, is
+enough. For a small business that flag is lost income for as long as it stands, so the way
+out is designed alongside the way in rather than left to a support address.
+
+`pattern_appeals` is insert-only under RLS, exactly like `reports`. Two functions carry the
+rest:
+
+- `appeal_status(reference)` — `SECURITY DEFINER`, returns six fields for one reference.
+  Because the table has no SELECT policy, this is the only read path, and it cannot
+  enumerate. The reference is 12 hex characters from `gen_random_bytes`, so it is not an
+  oracle for other merchants' appeals.
+- `resolve_appeal(reference, status, note)` — `SECURITY DEFINER`, and deliberately **not**
+  granted to `anon` or `authenticated`. It runs from the dashboard or a service_role key.
+
+Upholding an appeal sets `active = false` **and** `overturned = true` in the same
+transaction as the status change. The `overturned` flag is separate from resetting
+`report_count` because otherwise the next report would re-activate a pattern that has
+already been reviewed and cleared — the aggregation trigger reads
+`active = (report_count + 1) >= threshold and not overturned`. Reports keep accruing so a
+genuinely fraudulent payee that appealed successfully is still visible to a reviewer.
+
+The appeal counts are exposed in `live_stats` and rendered on the dashboard. How often the
+system flags the wrong payee is the number a fraud tool is least inclined to publish, and
+the one that most deserves to be public.
+
+---
+
+## 3c. The threat-intel API
+
+`/api/v1/{lookup,patterns,stats,appeal}` are Next.js route handlers over the same views the
+app reads. They exist for two reasons.
+
+**Reach.** The most useful place for this intelligence is not our app — it is inside the
+payment flow the user already trusts. An open, CORS-enabled, key-less JSON API is the
+lowest-friction way for a bank or another UPI app to consume it.
+
+**A stable shape.** The response format is ours to keep stable even if the storage behind it
+changes, and the wording can carry the caveats a raw table cannot.
+
+The most important of those caveats is a naming decision: the lookup response field is
+`listed`, not `safe`. `listed: false` means *not confirmed by the community* and nothing
+more — the structural and text models that produce a verdict run on the client and are not
+reachable from the API. A field called `safe` would invite an integrator to treat a miss as
+a green light, which is precisely the wrong reading.
+
+An unconfigured deployment answers `503 backend_unconfigured` rather than `200` with an
+empty list. Empty data would read as "nothing has been reported", which is a different and
+false claim.
 
 ---
 
@@ -192,12 +321,37 @@ plugin script can win the ordering race against it.
 
 Deliberate exclusions, recorded so they are not mistaken for oversights:
 
-**Android only.** SMS and QR interception require platform access iOS does not grant.
+**Android only, for the *app*.** SMS and QR interception require platform access iOS does
+not grant. The web checker covers iOS and desktop for the manual paths — pasting a payload,
+a UPI ID, or a message — but it cannot read an incoming SMS or intercept a scan, and no
+amount of web work would change that.
 
-**No accounts, no login.** The app needs no identity to function: scan history is local,
-and the report threshold uses a random per-install token. There is no user database to
-breach, and asking a scam-wary user to create an account before checking a QR is the worst
-possible first interaction.
+**No accounts, no login, on either client.** Neither needs an identity to function: scan
+history is local, and the report threshold uses a random per-install or per-browser token.
+There is no user database to breach, and asking a scam-wary user to create an account
+before checking a QR is the worst possible first interaction. The one place a persistent
+handle exists is the appeal reference code, which is deliberately the only key to that row.
+
+**The public website does not document the method.** Model names, thresholds, multipliers and
+feature lists appear in this repository and in the README, which is where they can be reviewed
+properly. The site itself explains *what* was checked in the user's own terms — what the message
+asks of you, who sent it, where the link really goes — and never *how*. That is a product decision
+about a public marketing surface, not an attempt to make the system unauditable: everything is
+here.
+
+**A QR that is not a payment is refused, not scored.** `classifyQrPayload` gates the checker before
+the engine runs: website links, Wi-Fi configs, vCards, plain text and Bharat QR / EMVCo payloads
+are named and declined. Scoring them would produce a confident number about a question nobody
+asked, and "Safe" on a phishing-link QR would be actively harmful. The gate lives in the UI layer
+rather than in `RiskEngine`, so the engine stays identical to the Dart one and the parity tests
+keep their meaning; the Android scanner should grow the same gate.
+
+**Appeals are reviewed out of band.** `resolve_appeal` is a database function called from
+the Supabase dashboard or with a service_role key; there is no built reviewer UI. Building
+one would mean building authentication, roles, and an audit trail for a queue that is empty
+on a new deployment — and a reviewer console that nobody is authenticated into would be
+decoration. The database side of the workflow is complete and enforced; the console is not
+claimed anywhere.
 
 **No live call blocking.** TRAI's July 2026 clarification bars third-party apps from
 tagging, blocking, or filtering 1600-series calls under the TCCCPR. The `kind` column keeps
