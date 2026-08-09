@@ -411,11 +411,16 @@ except the two Supabase values, which Render prompts for and stores as secrets r
 reading from the file.
 
 It deploys as a **Web Service, not a Static Site** — a static export would silently drop all
-four `/api/v1/*` routes — and on the **free** plan, which cannot bill. The trade-off is that
-a free service spins down after ~15 minutes idle and takes 30–60s to answer the next
-request, so open the URL a few minutes before any demo. Render has no hard spend cap, so a
-paid instance would keep charging once promotional credits ran out; `plan: free` is the only
-setting that guarantees otherwise.
+four `/api/v1/*` routes — on the **starter** plan, which does not sleep. A free instance
+spins down after ~15 minutes idle and makes the next visitor wait 30–60s, which is the worst
+possible first impression for a link someone clicks once.
+
+> **Billing note.** Render has no hard spend cap: once promotional credit is exhausted it
+> charges the payment method on file, and nothing stops it automatically. Credit balance is
+> under *workspace → Settings → Billing*. To guarantee no charge ever lands, **delete the
+> service** when it is no longer needed rather than relying on noticing the balance run out.
+> Switching `plan:` to `free` in `render.yaml` removes the billing exposure entirely, at the
+> cost of the cold starts described above.
 
 **Deploying to Vercel** instead: import the repository, set **Root Directory** to `web`, and
 add the same two environment variables. You may also need to enable *"Include source files

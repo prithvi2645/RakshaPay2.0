@@ -11,25 +11,22 @@
 #                    (/api/v1/lookup, /patterns, /stats, /appeal); a static
 #                    export would silently drop all four.
 #
-#   plan: free       Chosen deliberately over `starter`, and the trade-off is
-#                    real, so it is written down rather than left as a default.
+#   plan: starter    $7/month, billed per second, and it never sleeps - which is
+#                    the point: a free instance spins down after ~15 minutes and
+#                    makes the next visitor wait 30-60s on a blank page.
 #
-#                    Render has NO hard spend cap: a paid instance keeps billing
-#                    the card on file once promotional credits are exhausted,
-#                    and nothing stops it automatically. The free plan cannot
-#                    bill at all, which is the property we actually want here.
+#                    Promotional credits only apply to PAID usage, so a free
+#                    instance would leave them untouched. This is deliberately
+#                    on starter so the available credit is what pays for it.
 #
-#                    The cost is that a free web service spins down after ~15
-#                    minutes of inactivity and takes 30-60s to answer the next
-#                    request. Mitigation: open the URL a few minutes before any
-#                    demo so the instance is already warm. An external uptime
-#                    pinger also works, at the cost of burning free instance
-#                    hours.
+#                    !! Render has NO hard spend cap. Once credits are exhausted
+#                    it charges the card on file and nothing stops it. Credit
+#                    balance is at: workspace -> Settings -> Billing.
 #
-#                    To switch to a paid, always-on instance later, change this
-#                    to `starter` ($7/month, billed per second) - but only with
-#                    a deliberate decision to accept charges after credits run
-#                    out.
+#                    $50 of credit covers roughly seven months at this rate. To
+#                    guarantee no charge ever lands, DELETE the service (Settings
+#                    -> Delete Web Service) once it is no longer needed, rather
+#                    than relying on remembering before the balance runs out.
 #
 #   region           Singapore is the closest Render region to Indian users.
 #
@@ -42,7 +39,7 @@ services:
   - type: web
     name: rakshapay-web
     runtime: node
-    plan: free
+    plan: starter
     region: singapore
     rootDir: web
     # npm ci rather than npm install: it installs exactly package-lock.json, so
