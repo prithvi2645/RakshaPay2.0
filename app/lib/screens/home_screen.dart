@@ -35,7 +35,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      _HomeTab(engine: widget.engine, history: widget.history, onChanged: _refresh),
+      _HomeTab(
+        engine: widget.engine,
+        history: widget.history,
+        smsMonitor: widget.smsMonitor,
+        onChanged: _refresh,
+      ),
       AlertsScreen(history: widget.history),
       const SizedBox.shrink(), // scan handled via push, not a tab body
       SettingsScreen(
@@ -79,14 +84,65 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeTab extends StatelessWidget {
+class _HomeTab extends StatefulWidget {
   final RiskEngine engine;
   final ScanHistoryService history;
+  final SmsMonitorService smsMonitor;
   final VoidCallback onChanged;
-  const _HomeTab({required this.engine, required this.history, required this.onChanged});
+  const _HomeTab({
+    required this.engine,
+    required this.history,
+    required this.smsMonitor,
+    required this.onChanged,
+  });
+
+  @override
+  State<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<_HomeTab> {
+  bool _scanningMessages = false;
+
+  /// On the home screen rather than buried in Settings: "check the messages I
+  /// already have" is a thing a worried person wants to do the moment they open
+  /// the app, not a preference they configure once.
+  Future<void> _checkMessages() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _scanningMessages = true);
+
+    try {
+      final scored = await widget.smsMonitor.scanInbox();
+      if (!mounted) return;
+      setState(() => _scanningMessages = false);
+      widget.onChanged();
+
+      if (widget.smsMonitor.permissionDenied) {
+        messenger.showSnackBar(const SnackBar(
+          content: Text('SMS permission is needed to read your messages. Nothing is uploaded.'),
+          duration: Duration(seconds: 5),
+        ));
+        return;
+      }
+
+      final risky = scored.where((a) => a.result.level != RiskLevel.safe).length;
+      messenger.showSnackBar(SnackBar(
+        content: Text(risky == 0
+            ? 'Checked ${scored.length} messages — nothing suspicious found.'
+            : 'Checked ${scored.length} messages. $risky need${risky == 1 ? 's' : ''} attention — see Alerts.'),
+        duration: const Duration(seconds: 5),
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _scanningMessages = false);
+      messenger.showSnackBar(SnackBar(content: Text('Could not read messages: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final engine = widget.engine;
+    final history = widget.history;
+    final onChanged = widget.onChanged;
     final safety = 100 - (history.records.isEmpty ? 0 : (history.records.take(10).map((r) => r.score).reduce((a, b) => a + b) / history.records.take(10).length)).round();
 
     return SafeArea(
@@ -182,6 +238,34 @@ class _HomeTab extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _scanningMessages ? null : _checkMessages,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.navy,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      icon: _scanningMessages
+                          ? const SizedBox(
+                              width: 17,
+                              height: 17,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.mark_email_unread_outlined),
+                      label: Text(
+                        _scanningMessages ? 'Checking your messages...' : 'Check my messages',
+                        style: AppTheme.body(14.5, color: Colors.white).copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Reads the messages already on your phone and flags anything risky. Nothing is uploaded.',
+                    textAlign: TextAlign.center,
+                    style: AppTheme.body(11.5, color: AppColors.muted, height: 1.35),
                   ),
                   const SizedBox(height: 26),
                   Text('Recent Checks', style: AppTheme.heading(17)),

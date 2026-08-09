@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../models/risk_result.dart';
 import '../services/risk_engine.dart';
 import '../services/scan_history_service.dart';
 import '../services/sms_monitor_service.dart';
@@ -29,7 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _tts = TtsService();
   String _language = TtsService.languages.first.code;
   bool _syncing = false;
-  bool _scanningInbox = false;
 
   // Read from the shared service rather than a local copy, so the switch shows
   // what is actually running instead of resetting every time this screen is
@@ -69,37 +67,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         duration: Duration(seconds: 6),
       ));
-    }
-  }
-
-  Future<void> _scanInbox() async {
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _scanningInbox = true);
-
-    try {
-      final scored = await widget.smsMonitor.scanInbox();
-      if (!mounted) return;
-      setState(() => _scanningInbox = false);
-
-      if (widget.smsMonitor.permissionDenied) {
-        messenger.showSnackBar(const SnackBar(
-          content: Text('SMS permission is needed to read your messages. Nothing is uploaded.'),
-          duration: Duration(seconds: 5),
-        ));
-        return;
-      }
-
-      final risky = scored.where((a) => a.result.level != RiskLevel.safe).length;
-      messenger.showSnackBar(SnackBar(
-        content: Text(risky == 0
-            ? 'Checked ${scored.length} messages — nothing suspicious found.'
-            : 'Checked ${scored.length} messages. $risky need${risky == 1 ? 's' : ''} attention — see the Alerts tab.'),
-        duration: const Duration(seconds: 5),
-      ));
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _scanningInbox = false);
-      messenger.showSnackBar(SnackBar(content: Text('Could not read messages: $e')));
     }
   }
 
@@ -191,29 +158,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 1),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Already received something suspicious? Check the messages already on your phone.',
-                        style: AppTheme.body(12.5, color: AppColors.muted, height: 1.4),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _scanningInbox ? null : _scanInbox,
-                          icon: _scanningInbox
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.search),
-                          label: Text(_scanningInbox ? 'Checking messages...' : 'Check recent messages'),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'To check the messages already on your phone, use "Check my messages" on the Home screen.',
+                    style: AppTheme.body(12.5, color: AppColors.muted, height: 1.4),
                   ),
                 ),
               ],
