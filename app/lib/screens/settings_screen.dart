@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/risk_result.dart';
 import '../services/risk_engine.dart';
 import '../services/scan_history_service.dart';
 import '../services/sms_monitor_service.dart';
@@ -76,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _scanningInbox = true);
 
     try {
-      final found = await widget.smsMonitor.scanInbox();
+      final scored = await widget.smsMonitor.scanInbox();
       if (!mounted) return;
       setState(() => _scanningInbox = false);
 
@@ -88,10 +89,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return;
       }
 
+      final risky = scored.where((a) => a.result.level != RiskLevel.safe).length;
       messenger.showSnackBar(SnackBar(
-        content: Text(found.isEmpty
-            ? 'Checked your recent messages — nothing suspicious found.'
-            : 'Found ${found.length} suspicious message${found.length == 1 ? '' : 's'}. See the Alerts tab.'),
+        content: Text(risky == 0
+            ? 'Checked ${scored.length} messages — nothing suspicious found.'
+            : 'Checked ${scored.length} messages. $risky need${risky == 1 ? 's' : ''} attention — see the Alerts tab.'),
         duration: const Duration(seconds: 5),
       ));
     } catch (e) {

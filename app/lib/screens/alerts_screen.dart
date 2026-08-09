@@ -5,7 +5,12 @@ import '../models/scan_record.dart';
 import '../services/scan_history_service.dart';
 import '../theme/app_theme.dart';
 
-enum _Filter { all, risky, messages }
+/// High risk and caution are separate tabs rather than one "risky" bucket.
+/// They call for different actions — one means stop, the other means look
+/// closer — and collapsing them hides that distinction exactly where it
+/// matters. `messages` is every SMS that has been checked, safe ones included,
+/// so it reads as an inbox rather than as a filtered alert list.
+enum _Filter { all, highRisk, caution, messages }
 
 class AlertsScreen extends StatefulWidget {
   final ScanHistoryService history;
@@ -20,11 +25,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final risky = widget.history.records.where((r) => r.level != RiskLevel.safe).toList();
+    final records = widget.history.records;
     final list = switch (_filter) {
-      _Filter.all => widget.history.records,
-      _Filter.risky => risky,
-      _Filter.messages => risky.where((r) => r.source == 'sms').toList(),
+      _Filter.all => records,
+      _Filter.highRisk => records.where((r) => r.level == RiskLevel.highRisk).toList(),
+      _Filter.caution => records.where((r) => r.level == RiskLevel.caution).toList(),
+      _Filter.messages => records.where((r) => r.source == 'sms').toList(),
     };
 
     return Scaffold(
@@ -32,21 +38,28 @@ class _AlertsScreenState extends State<AlertsScreen> {
       appBar: AppBar(title: const Text('Alerts'), backgroundColor: AppColors.background, elevation: 0, foregroundColor: AppColors.navy),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+          SizedBox(
+            height: 48,
+            // Scrollable: four chips do not fit across a narrow phone, and a
+            // wrapped row would push the list down.
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               children: [
-                _chip('All', _Filter.all),
+                _chip('All', _Filter.all, widget.history.records.length),
                 const SizedBox(width: 8),
-                _chip('Risky', _Filter.risky),
+                _chip('High risk', _Filter.highRisk, widget.history.countByLevel(RiskLevel.highRisk)),
                 const SizedBox(width: 8),
-                _chip('Messages', _Filter.messages),
+                _chip('Caution', _Filter.caution, widget.history.countByLevel(RiskLevel.caution)),
+                const SizedBox(width: 8),
+                _chip('Messages', _Filter.messages,
+                    widget.history.records.where((r) => r.source == 'sms').length),
               ],
             ),
           ),
           Expanded(
             child: list.isEmpty
-                ? Center(child: Text('Nothing here yet', style: AppTheme.body(14, color: AppColors.muted)))
+                ? Center(child: Text(_emptyLabel, style: AppTheme.body(14, color: AppColors.muted)))
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                     itemCount: list.length,
@@ -58,10 +71,21 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 
-  Widget _chip(String label, _Filter value) {
+  String get _emptyLabel => switch (_filter) {
+        _Filter.all => 'Nothing checked yet',
+        _Filter.highRisk => 'No high-risk items. That is the good outcome.',
+        _Filter.caution => 'Nothing needs a second look right now',
+        _Filter.messages =>
+          'No messages checked yet. Settings → Check recent messages will read the ones already on your phone.',
+      };
+
+  Widget _chip(String label, _Filter value, int count) {
     final selected = _filter == value;
     return ChoiceChip(
-      label: Text(label),
+      // The count is on the chip because "Caution (0)" answers the question
+      // before it is asked, instead of making the user tap to find an empty
+      // list.
+      label: Text(count > 0 ? '$label  $count' : label),
       selected: selected,
       onSelected: (_) => setState(() => _filter = value),
       selectedColor: AppColors.navy,

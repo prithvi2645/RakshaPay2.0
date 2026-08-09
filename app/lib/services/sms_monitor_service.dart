@@ -109,30 +109,31 @@ class SmsMonitorService {
       sortOrder: [OrderBy(SmsColumn.DATE, sort: Sort.DESC)],
     );
 
-    final found = <ScamAlert>[];
+    // Safe messages are kept too. The Alerts screen has a Messages tab that is
+    // meant to read like an inbox — "these are your messages, here is what we
+    // made of each" — and a list that silently omitted everything harmless
+    // would be a filtered alert list wearing an inbox's name.
+    final scored = <ScamAlert>[];
     for (final message in messages.take(limit)) {
       final body = message.body;
       if (body == null || body.isEmpty) continue;
 
-      final result = _engine.analyzeMessage(body, sender: message.address).result;
-      if (result.level == RiskLevel.safe) continue;
-
-      found.add(ScamAlert(
+      scored.add(ScamAlert(
         body: body,
         sender: message.address,
-        result: result,
+        result: _engine.analyzeMessage(body, sender: message.address).result,
         receivedAt: message.date != null
             ? DateTime.fromMillisecondsSinceEpoch(message.date!)
             : DateTime.now(),
       ));
     }
 
-    // Push through the same stream the live listener uses, so these land in
-    // history and the Alerts badge exactly like a message caught in real time.
-    for (final alert in found) {
+    // Through the same stream the live listener uses, so these land in history
+    // and the Alerts badge exactly like a message caught in real time.
+    for (final alert in scored) {
       _alertController.add(alert);
     }
-    return found;
+    return scored;
   }
 
   Future<void> _persist(bool enabled) async {

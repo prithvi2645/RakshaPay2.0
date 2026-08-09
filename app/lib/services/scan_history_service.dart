@@ -9,7 +9,10 @@ import '../models/scan_record.dart';
 /// pays, which never leaves the phone.
 class ScanHistoryService {
   static const _key = 'scan_history';
-  static const _maxRecords = 100;
+  // Raised from 100 once the inbox check began recording safe messages too: a
+  // single scan can add 60 records, which would otherwise evict the QR and
+  // manual checks the home screen's stats are built from.
+  static const _maxRecords = 250;
 
   List<ScanRecord> _records = [];
 
