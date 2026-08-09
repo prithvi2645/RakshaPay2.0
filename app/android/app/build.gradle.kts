@@ -6,7 +6,11 @@ plugins {
 
 android {
     namespace = "com.rakshapay.rakshapay"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned rather than flutter.compileSdkVersion: several plugin AARs
+    // (onnxruntime's exifinterface transitive dep, others) each demand a
+    // different compileSdk floor. 36 is the highest value AGP 9.0.1 still
+    // recommends and clears every floor seen so far.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

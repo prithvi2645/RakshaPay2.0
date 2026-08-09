@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../theme/app_theme.dart';
 
+/// Purely informational — the actual permission prompts happen at the point
+/// of use (camera when Scan opens, SMS when "Watch SMS" is toggled in
+/// Settings), which is both simpler than a separate permissions package and
+/// better UX: a system dialog makes more sense right when its reason for
+/// existing is on screen.
 class PermissionsScreen extends StatelessWidget {
   final VoidCallback onDone;
   const PermissionsScreen({super.key, required this.onDone});
-
-  Future<void> _requestAndContinue(BuildContext context) async {
-    await [Permission.camera, Permission.sms].request();
-    onDone();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +34,8 @@ class PermissionsScreen extends StatelessWidget {
               const Spacer(),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(onPressed: () => _requestAndContinue(context), child: const Text('Allow & Continue')),
+                child: FilledButton(onPressed: onDone, child: const Text('Continue')),
               ),
-              const SizedBox(height: 10),
-              TextButton(onPressed: onDone, child: const Text('Skip for now')),
             ],
           ),
         ),
