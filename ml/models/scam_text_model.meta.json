@@ -1,0 +1,13 @@
+{
+  "classes": [
+    0,
+    1
+  ],
+  "note": "scam is class label 1",
+  "training_data": {
+    "real_source": "UCI SMS Spam Collection",
+    "real_rows": 5572,
+    "synthetic_rows": 1200,
+    "eval_note": "metrics measured on held-out REAL messages only"
+  }
+}

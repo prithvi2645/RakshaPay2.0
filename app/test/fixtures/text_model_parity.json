@@ -1,0 +1,46 @@
+[
+  {
+    "text": "Rs.500 debited from a/c **1234 for UPI txn to City Cafe. Avl bal Rs.4200. -HDFC Bank",
+    "scam_probability": 0.13852133014892454
+  },
+  {
+    "text": "Dear customer, your SBI KYC will be blocked in 24 hours. Update now: http://bit.ly/1234",
+    "scam_probability": 0.9882648228912333
+  },
+  {
+    "text": "We noticed suspicious activity on your UPI account. Share the OTP sent to you to secure it.",
+    "scam_probability": 0.9878872636202466
+  },
+  {
+    "text": "This is HDFC Bank support. Please install AnyDesk and share your screen so we can process your refund.",
+    "scam_probability": 0.9840525137552695
+  },
+  {
+    "text": "Hi Priya, are we still meeting for lunch tomorrow at 1pm?",
+    "scam_probability": 0.019770542228667348
+  },
+  {
+    "text": "Congratulations! You won Rs.50000 lottery. Send Rs.499 processing fee via UPI to claim.",
+    "scam_probability": 0.9900002318601707
+  },
+  {
+    "text": "Your OTP for SBI login is 481920. Do not share this with anyone.",
+    "scam_probability": 0.027255056077748075
+  },
+  {
+    "text": "I have sent Rs.2000 to your account by mistake. Please accept the collect request to return it.",
+    "scam_probability": 0.9901468645021606
+  },
+  {
+    "text": "",
+    "scam_probability": 0.06952297475186303
+  },
+  {
+    "text": "!!! ??? ...",
+    "scam_probability": 0.06952297475186303
+  },
+  {
+    "text": "zzzz qqqq xxxx wwww",
+    "scam_probability": 0.07206667214876748
+  }
+]

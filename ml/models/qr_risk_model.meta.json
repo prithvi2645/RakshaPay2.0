@@ -1,0 +1,21 @@
+{
+  "features": [
+    "known_psp_suffix",
+    "entropy",
+    "digit_ratio",
+    "local_part_len",
+    "has_amount",
+    "amount",
+    "has_suspicious_keyword"
+  ],
+  "output_names": [
+    "label",
+    "probabilities"
+  ],
+  "classes": [
+    0,
+    1
+  ],
+  "note": "output[1] gives per-class probabilities; fraud is class label 1",
+  "training_data": "synthetic \u2014 no public dataset of fraudulent UPI QR/VPA strings exists"
+}

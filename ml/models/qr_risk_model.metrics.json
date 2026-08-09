@@ -1,0 +1,18 @@
+{
+  "accuracy": 0.988125,
+  "legit": {
+    "precision": 0.9768009768009768,
+    "recall": 1.0,
+    "f1": 0.9882643607164917
+  },
+  "fraud": {
+    "precision": 1.0,
+    "recall": 0.97625,
+    "f1": 0.9879822896900696
+  },
+  "support": {
+    "legit": 800.0,
+    "fraud": 800.0
+  },
+  "note": "measured on synthetic held-out data \u2014 see meta for the disclosed limitation"
+}
