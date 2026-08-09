@@ -84,7 +84,7 @@ export function ScanInterceptScene() {
               />
             </g>
           )}
-          <text x="88" y="212" textAnchor="middle" className="fill-white/45 text-[9px]">
+          <text x="88" y="212" textAnchor="middle" className="fill-muted text-[9px]">
             Sticker on the counter
           </text>
         </g>
@@ -92,7 +92,7 @@ export function ScanInterceptScene() {
         {/* Path from the QR to the phone */}
         <path
           d="M156 130 H196"
-          stroke="rgba(255,255,255,0.28)"
+          className="stroke-navy/30"
           strokeWidth="1.5"
           strokeDasharray="4 5"
         />
@@ -152,7 +152,7 @@ export function ScanInterceptScene() {
         )}
       </svg>
 
-      <p className="mt-3 text-center text-sm font-medium text-white/70 transition-opacity duration-300">
+      <p className="mt-3 text-center text-sm font-medium text-muted transition-opacity duration-300">
         {caption}
       </p>
     </div>

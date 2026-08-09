@@ -24,7 +24,7 @@ const ONLY_THE_APP = [
 
 export function CompanionBanner() {
   return (
-    <section className="border-y border-line/10 bg-surface">
+    <section className="border-y border-line/10 bg-surface/70 backdrop-blur">
       <div className="mx-auto max-w-6xl px-5 py-14">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center">
           <div>

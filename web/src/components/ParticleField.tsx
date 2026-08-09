@@ -43,6 +43,24 @@ export function ParticleField() {
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // The field runs behind the whole page, which is light in one theme and
+    // dark in the other, so the ink has to follow. Pale blue reads on dark;
+    // the same blue on a white page is invisible, so light mode uses the navy
+    // from the palette at low alpha instead.
+    let ink = { r: 190, g: 216, b: 255 };
+    function syncTheme() {
+      ink = document.documentElement.classList.contains('dark')
+        ? { r: 190, g: 216, b: 255 }
+        : { r: 22, g: 34, b: 74 };
+    }
+    syncTheme();
+
+    const themeWatcher = new MutationObserver(syncTheme);
+    themeWatcher.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
     let width = 0;
     let height = 0;
     let particles: Particle[] = [];
@@ -113,7 +131,7 @@ export function ParticleField() {
           if (dist2 > LINK_DISTANCE * LINK_DISTANCE) continue;
 
           const alpha = (1 - Math.sqrt(dist2) / LINK_DISTANCE) * 0.22;
-          ctx!.strokeStyle = `rgba(160, 200, 255, ${alpha})`;
+          ctx!.strokeStyle = `rgba(${ink.r}, ${ink.g}, ${ink.b}, ${alpha})`;
           ctx!.lineWidth = 1;
           ctx!.beginPath();
           ctx!.moveTo(a.x, a.y);
@@ -126,8 +144,8 @@ export function ParticleField() {
           const dy = a.y - pointer.y;
           const dist2 = dx * dx + dy * dy;
           if (dist2 < POINTER_RADIUS * POINTER_RADIUS) {
-            const alpha = (1 - Math.sqrt(dist2) / POINTER_RADIUS) * 0.45;
-            ctx!.strokeStyle = `rgba(124, 197, 255, ${alpha})`;
+            const alpha = (1 - Math.sqrt(dist2) / POINTER_RADIUS) * 0.5;
+            ctx!.strokeStyle = `rgba(${ink.r}, ${ink.g}, ${ink.b}, ${alpha})`;
             ctx!.lineWidth = 1;
             ctx!.beginPath();
             ctx!.moveTo(a.x, a.y);
@@ -136,7 +154,7 @@ export function ParticleField() {
           }
         }
 
-        ctx!.fillStyle = 'rgba(190, 216, 255, 0.55)';
+        ctx!.fillStyle = `rgba(${ink.r}, ${ink.g}, ${ink.b}, 0.5)`;
         ctx!.beginPath();
         ctx!.arc(a.x, a.y, a.r, 0, Math.PI * 2);
         ctx!.fill();
@@ -187,6 +205,7 @@ export function ParticleField() {
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
+      themeWatcher.disconnect();
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerleave', onPointerLeave);
       document.removeEventListener('visibilitychange', onVisibility);

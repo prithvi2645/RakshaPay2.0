@@ -5,7 +5,6 @@ import { CompanionBanner } from '@/components/CompanionBanner';
 import { CorrectionDemo } from '@/components/CorrectionDemo';
 import { LiveStatsStrip } from '@/components/LiveStatsStrip';
 import { ParticleField } from '@/components/ParticleField';
-import { PaymentStream } from '@/components/PaymentStream';
 import { ScamAnatomy } from '@/components/ScamAnatomy';
 import { ScanInterceptScene } from '@/components/ScanInterceptScene';
 import { ChartIcon, CodeIcon, LinkIcon, LockIcon, PhoneIcon, QrIcon, ScaleIcon } from '@/components/icons';
@@ -13,88 +12,78 @@ import { ChartIcon, CodeIcon, LinkIcon, LockIcon, PhoneIcon, QrIcon, ScaleIcon }
 export default function HomePage() {
   return (
     <>
-      <section className="relative overflow-hidden bg-ink text-white">
-        <div className="absolute inset-0 opacity-30" aria-hidden>
-          <PaymentStream />
-        </div>
-        {/* Keeps the headline readable over whatever the canvases are doing. */}
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-r from-ink via-ink/90 to-ink/55"
-        />
-        {/* Above the scrim on purpose: the particle links are the layer the
-            cursor interacts with, so dimming them would defeat the effect. */}
-        <div className="absolute inset-0" aria-hidden>
-          <ParticleField />
-        </div>
+      {/*
+        One background for the whole page rather than a decorated hero sitting
+        on a plain page. It is `fixed`, so it stays put while the content
+        scrolls over it, and it is behind everything: sections below use
+        translucent surfaces so the same field shows through from top to bottom.
+      */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+        <ParticleField />
+      </div>
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:pb-24 lg:pt-24">
-          <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/85 backdrop-blur">
-              <LockIcon className="h-3.5 w-3.5" />
-              The models run on your device, not on our servers
-            </p>
+      <div className="relative z-10">
+        <section className="relative overflow-hidden">
+          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:pb-24 lg:pt-24">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full border border-navy/12 bg-surface/80 px-3.5 py-1.5 text-xs font-semibold text-navy/75 backdrop-blur">
+                <LockIcon className="h-3.5 w-3.5" />
+                Checks happen on your device, not on our servers
+              </p>
 
-            <h1 className="mt-5 font-display text-4xl font-bold leading-[1.08] tracking-tight sm:text-6xl">
-              <span className="fade-up">UPI fraud is decided in the ten seconds</span>{' '}
-              <span className="fade-up fade-up-1 text-[#FF8A8A]">before</span>{' '}
-              <span className="fade-up fade-up-2">you tap pay.</span>
-            </h1>
+              <h1 className="mt-5 font-display text-4xl font-bold leading-[1.08] tracking-tight sm:text-6xl">
+                <span className="fade-up">UPI fraud is decided in the ten seconds</span>{' '}
+                <span className="fade-up fade-up-1 text-danger">before</span>{' '}
+                <span className="fade-up fade-up-2">you tap pay.</span>
+              </h1>
 
-            <p className="fade-up fade-up-2 mt-5 max-w-xl text-lg leading-relaxed text-white/70">
-              RakshaPay puts a check into those ten seconds. On Android it does it for you — at the
-              scanner, and on every payment message that arrives. Here, on any phone or laptop with
-              nothing installed, you can check the same things by hand and get the same verdict.
-            </p>
+              <p className="fade-up fade-up-2 mt-5 max-w-xl text-lg leading-relaxed text-muted">
+                RakshaPay puts a check into those ten seconds. On Android it does it for you — at
+                the scanner, and on every payment message that arrives. Here, on any phone or
+                laptop with nothing installed, you can check the same things by hand and get the
+                same verdict.
+              </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/check"
-                // The hero is dark in both themes, so this button stays literally
-                // white with literally dark text rather than following the palette.
-                className="btn rounded-xl bg-white px-5 py-3 text-ink shadow-lift hover:bg-white/90"
-              >
-                Check a payment
-              </Link>
-              <Link
-                href="/how-it-works"
-                className="btn rounded-xl border border-white/25 px-5 py-3 text-white hover:border-white/50"
-              >
-                See how it decides
-              </Link>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link href="/check" className="btn-primary shadow-lift">
+                  Check a payment
+                </Link>
+                <Link href="/dashboard" className="btn-ghost">
+                  See what people are reporting
+                </Link>
+              </div>
+
+              <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted">
+                <span>
+                  <span className="font-semibold text-safe">Green</span> passes the checkpoint
+                </span>
+                <span>
+                  <span className="font-semibold text-danger">Red</span> is stopped at it
+                </span>
+              </p>
             </div>
 
-            <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-white/45">
-              <span>
-                <span className="text-white/80">Green</span> passes the checkpoint
-              </span>
-              <span>
-                <span className="text-[#FF8A8A]">Red</span> is stopped at it
-              </span>
-            </p>
+            <div className="hidden lg:flex lg:justify-center">
+              <ScanInterceptScene />
+            </div>
           </div>
 
-          <div className="hidden lg:flex lg:justify-center">
-            <ScanInterceptScene />
+          <div className="relative border-y border-line/10 bg-surface/70 backdrop-blur">
+            <div className="mx-auto max-w-6xl px-5 py-8">
+              <LiveStatsStrip />
+            </div>
           </div>
-        </div>
-
-        <div className="relative border-t border-white/10 bg-ink/60 backdrop-blur">
-          <div className="mx-auto max-w-6xl px-5 py-8">
-            <LiveStatsStrip dark />
-          </div>
-        </div>
-      </section>
+        </section>
 
       <CompanionBanner />
 
-      <section className="bg-ink px-5 pb-12 lg:hidden">
+      <section className="px-5 pb-12 lg:hidden">
         <div className="mx-auto flex max-w-md justify-center">
           <ScanInterceptScene />
         </div>
       </section>
 
-      <section className="border-y border-line/10 bg-surface">
+      <section className="border-y border-line/10 bg-surface/70 backdrop-blur">
         <div className="mx-auto max-w-6xl px-5 py-14">
           <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
             One scam, four places to stop it
@@ -242,6 +231,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      </div>
     </>
   );
 }
