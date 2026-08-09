@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 
 import { CursorGlow } from '@/components/CursorGlow';
+import { ParticleField } from '@/components/ParticleField';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
 
@@ -46,11 +47,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="flex min-h-screen flex-col font-sans">
-        {/* Site-wide, not just the landing page: the card spotlight is worth
-            having wherever there are cards. */}
+        {/*
+          One background for the entire site, not just the landing page. It is
+          fixed, so it stays put while content scrolls over it, and every page's
+          surfaces are translucent enough to let it through. Sits behind
+          everything at z-0; the header, content and footer are all above it.
+        */}
+        <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+          <ParticleField />
+        </div>
         <CursorGlow />
+
         <SiteHeader />
-        <main className="flex-1">{children}</main>
+        <main className="relative z-10 flex-1">{children}</main>
         <SiteFooter />
       </body>
     </html>

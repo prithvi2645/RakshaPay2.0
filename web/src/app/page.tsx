@@ -4,7 +4,6 @@ import { AlarmFatigue } from '@/components/AlarmFatigue';
 import { CompanionBanner } from '@/components/CompanionBanner';
 import { CorrectionDemo } from '@/components/CorrectionDemo';
 import { LiveStatsStrip } from '@/components/LiveStatsStrip';
-import { ParticleField } from '@/components/ParticleField';
 import { ScamAnatomy } from '@/components/ScamAnatomy';
 import { ScanInterceptScene } from '@/components/ScanInterceptScene';
 import { ChartIcon, CodeIcon, LinkIcon, LockIcon, PhoneIcon, QrIcon, ScaleIcon } from '@/components/icons';
@@ -12,17 +11,9 @@ import { ChartIcon, CodeIcon, LinkIcon, LockIcon, PhoneIcon, QrIcon, ScaleIcon }
 export default function HomePage() {
   return (
     <>
-      {/*
-        One background for the whole page rather than a decorated hero sitting
-        on a plain page. It is `fixed`, so it stays put while the content
-        scrolls over it, and it is behind everything: sections below use
-        translucent surfaces so the same field shows through from top to bottom.
-      */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
-        <ParticleField />
-      </div>
-
-      <div className="relative z-10">
+      {/* The particle field now lives in the root layout, so every page shares
+          one background rather than the landing page having its own. */}
+      <div className="relative">
         <section className="relative overflow-hidden">
           <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:pb-24 lg:pt-24">
             <div>
