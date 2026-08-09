@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* One palette, two values each. Components never carry `dark:` variants —
+     they name a role (surface, line, navy) and the role changes underneath. */
+  :root {
+    --c-navy: 22 34 74;
+    --c-ink: 12 19 48;
+    --c-canvas: 243 245 251;
+    --c-surface: 255 255 255;
+    --c-line: 12 19 48;
+    --c-safe: 31 157 85;
+    --c-safe-bg: 227 246 234;
+    --c-caution: 181 114 30;
+    --c-caution-bg: 251 239 221;
+    --c-danger: 208 60 60;
+    --c-danger-bg: 251 227 227;
+    --c-danger-border: 240 180 180;
+    --c-muted: 107 114 128;
+  }
+
+  .dark {
+    --c-navy: 226 232 245;
+    --c-ink: 6 10 26;
+    --c-canvas: 10 15 33;
+    --c-surface: 18 26 51;
+    --c-line: 226 232 245;
+    --c-safe: 74 201 126;
+    --c-safe-bg: 18 48 34;
+    --c-caution: 226 165 76;
+    --c-caution-bg: 55 40 18;
+    --c-danger: 246 118 118;
+    --c-danger-bg: 62 24 24;
+    --c-danger-border: 122 52 52;
+    --c-muted: 148 158 178;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-canvas text-navy antialiased;
+  }
+
+  ::selection {
+    @apply bg-navy text-canvas;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line/10 bg-surface p-6 shadow-card;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold
+           transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-navy text-white hover:bg-ink;
+  }
+
+  .btn-ghost {
+    @apply btn border border-navy/15 bg-surface text-navy hover:border-navy/35;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-navy/15 bg-surface px-4 py-3 text-sm text-navy
+           outline-none transition placeholder:text-muted focus:border-navy/50
+           focus:ring-4 focus:ring-navy/10;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+}
+
+/* Headline words settle in sequence on load. Purely decorative, so it is
+   disabled wholesale under reduced motion rather than merely shortened. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.5em);
+  }
+}
+
+.fade-up {
+  display: inline-block;
+  animation: fade-up 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.fade-up-1 {
+  animation-delay: 90ms;
+}
+
+.fade-up-2 {
+  animation-delay: 180ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up {
+    animation: none;
+  }
+}
+
+/* Hero scene: scanner beam, verdict entry, interception badge. All decorative,
+   so all of it stops under reduced motion — the scene freezes on its final
+   frame, which is the frame that carries the message. */
+@keyframes scan-beam {
+  from {
+    y: 62px;
+  }
+  to {
+    y: 172px;
+  }
+}
+
+.scan-beam {
+  animation: scan-beam 1s ease-in-out infinite alternate;
+}
+
+@keyframes verdict-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+.verdict-in {
+  transform-origin: 50% 40%;
+  animation: verdict-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes badge-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+.badge-in {
+  transform-origin: center;
+  animation: badge-in 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes pulse-soft {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.pulse-soft {
+  animation: pulse-soft 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-beam,
+  .verdict-in,
+  .badge-in,
+  .pulse-soft {
+    animation: none;
+  }
+}
+
+/* The score ring sweeps from empty on mount, matching the Android app's
+   SafetyScoreRing so a verdict reads the same on both clients. */
+@keyframes ring-sweep {
+  from {
+    stroke-dashoffset: var(--ring-circumference);
+  }
+}
+
+.ring-progress {
+  animation: ring-sweep 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress {
+    animation: none;
+  }
+}
