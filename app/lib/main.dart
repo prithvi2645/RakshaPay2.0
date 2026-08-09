@@ -1,121 +1,146 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
-  runApp(const MyApp());
+import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/permissions_screen.dart';
+import 'screens/splash_screen.dart';
+import 'services/risk_engine.dart';
+import 'services/scan_history_service.dart';
+import 'supabase_options.dart';
+import 'theme/app_theme.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (SupabaseOptions.isConfigured) {
+    try {
+      await Supabase.initialize(url: SupabaseOptions.url, publishableKey: SupabaseOptions.publishableKey);
+    } catch (_) {
+      // The app is offline-first: scoring runs entirely on-device, so a
+      // failed backend init must not stop the user from checking a payment.
+    }
+  }
+  runApp(const RakshaPayApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class RakshaPayApp extends StatelessWidget {
+  const RakshaPayApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      title: 'RakshaPay',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.theme,
+      home: const _Bootstrap(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+enum _Stage { loading, onboarding, permissions, home, failed }
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class _Bootstrap extends StatefulWidget {
+  const _Bootstrap();
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<_Bootstrap> createState() => _BootstrapState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _BootstrapState extends State<_Bootstrap> {
+  static const _seenOnboardingKey = 'seen_onboarding';
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  final _engine = RiskEngine();
+  final _history = ScanHistoryService();
+
+  _Stage _stage = _Stage.loading;
+  String _status = 'Loading protection...';
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _boot();
+  }
+
+  @override
+  void dispose() {
+    _engine.dispose();
+    super.dispose();
+  }
+
+  Future<void> _boot() async {
+    try {
+      setState(() => _status = 'Loading on-device models...');
+      await _engine.init();
+
+      setState(() => _status = 'Loading your history...');
+      await _history.load();
+
+      final prefs = await SharedPreferences.getInstance();
+      final seen = prefs.getBool(_seenOnboardingKey) ?? false;
+
+      if (!mounted) return;
+      setState(() => _stage = seen ? _Stage.home : _Stage.onboarding);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _stage = _Stage.failed;
+        _error = '$e';
+      });
+    }
+  }
+
+  Future<void> _finishOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_seenOnboardingKey, true);
+    if (mounted) setState(() => _stage = _Stage.home);
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    return switch (_stage) {
+      _Stage.loading => SplashScreen(status: _status),
+      _Stage.onboarding => OnboardingScreen(onDone: () => setState(() => _stage = _Stage.permissions)),
+      _Stage.permissions => PermissionsScreen(onDone: _finishOnboarding),
+      _Stage.home => HomeScreen(engine: _engine, history: _history),
+      _Stage.failed => _buildFailure(),
+    };
+  }
+
+  Widget _buildFailure() {
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
+      backgroundColor: AppColors.background,
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 54, color: AppColors.danger),
+              const SizedBox(height: 16),
+              Text('Could not start protection', style: AppTheme.heading(20)),
+              const SizedBox(height: 8),
+              Text(
+                _error ?? 'The on-device models failed to load.',
+                textAlign: TextAlign.center,
+                style: AppTheme.body(13.5, color: AppColors.muted, height: 1.45),
+              ),
+              const SizedBox(height: 22),
+              FilledButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _stage = _Stage.loading;
+                    _error = null;
+                  });
+                  _boot();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try again'),
+              ),
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }
