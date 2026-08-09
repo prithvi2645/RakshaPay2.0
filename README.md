@@ -424,3 +424,32 @@ They cover:
 - **Sender classification** — DLT headers vs. personal numbers
 - **Edge cases** — empty, punctuation-only, and out-of-vocabulary text must not divide by
   zero
+
+---
+
+## Who each surface is for
+
+Every page on the web build is aimed at exactly one person in exactly one situation. That
+constraint is what kept the site from becoming four variations of a brochure — if a page
+cannot name the person who lands on it and what they need in the next thirty seconds, it
+does not belong.
+
+| Page | Who lands here | Why they are there |
+|---|---|---|
+| `/check` | Someone about to pay — often on a friend's phone, or on a laptop, with no app installed | *"Is this QR safe?"* — needs an answer in about five seconds |
+| `/merchant` | A shop owner whose UPI ID got flagged | Losing income right now, needs it undone |
+| `/dashboard` | A journalist, researcher, or police cyber-cell | Wants to see what is spreading, and how often we get it wrong |
+| `/developers` | An engineer at a bank or UPI app | Evaluating whether to put this inside their own payment flow |
+
+The Android app serves a fifth: someone who wants the check to happen **without being asked
+for** — the QR read at the scanner, the payment SMS scored as it arrives, the warning spoken
+aloud for a parent who will not read a dialog.
+
+Two consequences worth stating, because they explain choices that otherwise look arbitrary:
+
+- **`/check` has no account, no install, and no upload.** The person using it is already
+  suspicious of something on their screen. Asking them to sign up first would lose them, and
+  asking them to upload the thing they distrust would be the wrong answer to why they came.
+- **`/developers` is open and key-less.** The most useful place for this intelligence is not
+  our app — it is inside the payment flow the user already trusts. Anything that makes
+  integration a procurement conversation defeats that.
