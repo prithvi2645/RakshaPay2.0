@@ -46,7 +46,10 @@ class SmsMonitorService {
 
   void _handle(String? body, String? sender) {
     if (body == null || body.isEmpty) return;
-    final result = _engine.analyzeText(body, sender: sender);
+    // analyzeMessage rather than analyzeText: the most common shape of UPI
+    // fraud by SMS carries its whole payload in a link, and a message like
+    // "KYC pending, update here: <link>" asks for nothing in its wording.
+    final result = _engine.analyzeMessage(body, sender: sender).result;
     if (result.level == RiskLevel.safe) return;
     _alertController.add(ScamAlert(body: body, sender: sender, result: result, receivedAt: DateTime.now()));
   }

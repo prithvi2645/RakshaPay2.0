@@ -1,0 +1,48 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+#
+# With this file committed, deploying is: Render dashboard -> New -> Blueprint
+# -> pick this repository -> paste the two Supabase values -> Apply. Everything
+# else below is already configured, so there is nothing to remember or mistype
+# at 3am.
+#
+# Deliberate choices:
+#
+#   type: web        NOT a static site. The site has server-side API routes
+#                    (/api/v1/lookup, /patterns, /stats, /appeal); a static
+#                    export would silently drop all four.
+#
+#   plan: starter    NOT free. A free web service sleeps after ~15 minutes idle
+#                    and takes 30-60s to wake, which is exactly what a judge
+#                    clicking the link would hit.
+#
+#   region           Singapore is the closest Render region to Indian users.
+#
+#   rootDir: web     Render still clones the whole repository, so the build can
+#                    reach ../app/assets/models — which it must, because
+#                    scripts/sync-assets.mjs copies the trained models from
+#                    there and web/public/models is intentionally gitignored.
+
+services:
+  - type: web
+    name: rakshapay-web
+    runtime: node
+    plan: starter
+    region: singapore
+    rootDir: web
+    # npm ci rather than npm install: it installs exactly package-lock.json, so
+    # a deploy can never pick up a different dependency tree than the one that
+    # was tested.
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # sync: false means Render prompts for the value and stores it as a
+      # secret rather than reading it from this file. Keys never belong in the
+      # repository, even publishable ones.
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_KEY
+        sync: false
