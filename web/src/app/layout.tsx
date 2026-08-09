@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 
+import { CursorGlow } from '@/components/CursorGlow';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
 
@@ -45,6 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="flex min-h-screen flex-col font-sans">
+        {/* Site-wide, not just the landing page: the card spotlight is worth
+            having wherever there are cards. */}
+        <CursorGlow />
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />

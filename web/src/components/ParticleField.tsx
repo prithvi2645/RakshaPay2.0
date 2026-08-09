@@ -130,7 +130,9 @@ export function ParticleField() {
           const dist2 = dx * dx + dy * dy;
           if (dist2 > LINK_DISTANCE * LINK_DISTANCE) continue;
 
-          const alpha = (1 - Math.sqrt(dist2) / LINK_DISTANCE) * 0.22;
+          // Tuned to read through the translucent section surfaces that sit on
+          // top of this layer, not against a bare background.
+          const alpha = (1 - Math.sqrt(dist2) / LINK_DISTANCE) * 0.34;
           ctx!.strokeStyle = `rgba(${ink.r}, ${ink.g}, ${ink.b}, ${alpha})`;
           ctx!.lineWidth = 1;
           ctx!.beginPath();
@@ -154,7 +156,7 @@ export function ParticleField() {
           }
         }
 
-        ctx!.fillStyle = `rgba(${ink.r}, ${ink.g}, ${ink.b}, 0.5)`;
+        ctx!.fillStyle = `rgba(${ink.r}, ${ink.g}, ${ink.b}, 0.7)`;
         ctx!.beginPath();
         ctx!.arc(a.x, a.y, a.r, 0, Math.PI * 2);
         ctx!.fill();

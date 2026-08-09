@@ -24,7 +24,9 @@ const ONLY_THE_APP = [
 
 export function CompanionBanner() {
   return (
-    <section className="border-y border-line/10 bg-surface/70 backdrop-blur">
+    // No backdrop-blur here: it would blur the page-wide particle field behind
+    // this section into a flat wash, defeating the point of one background.
+    <section className="border-y border-line/10 bg-surface/55">
       <div className="mx-auto max-w-6xl px-5 py-14">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center">
           <div>

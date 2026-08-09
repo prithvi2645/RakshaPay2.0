@@ -68,7 +68,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="relative border-y border-line/10 bg-surface/70 backdrop-blur">
+          <div className="relative border-y border-line/10 bg-surface/55">
             <div className="mx-auto max-w-6xl px-5 py-8">
               <LiveStatsStrip />
             </div>
@@ -83,7 +83,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-y border-line/10 bg-surface/70 backdrop-blur">
+      <section className="border-y border-line/10 bg-surface/55">
         <div className="mx-auto max-w-6xl px-5 py-14">
           <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
             One scam, four places to stop it
