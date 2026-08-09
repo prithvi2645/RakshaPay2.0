@@ -11,9 +11,25 @@
 #                    (/api/v1/lookup, /patterns, /stats, /appeal); a static
 #                    export would silently drop all four.
 #
-#   plan: starter    NOT free. A free web service sleeps after ~15 minutes idle
-#                    and takes 30-60s to wake, which is exactly what a judge
-#                    clicking the link would hit.
+#   plan: free       Chosen deliberately over `starter`, and the trade-off is
+#                    real, so it is written down rather than left as a default.
+#
+#                    Render has NO hard spend cap: a paid instance keeps billing
+#                    the card on file once promotional credits are exhausted,
+#                    and nothing stops it automatically. The free plan cannot
+#                    bill at all, which is the property we actually want here.
+#
+#                    The cost is that a free web service spins down after ~15
+#                    minutes of inactivity and takes 30-60s to answer the next
+#                    request. Mitigation: open the URL a few minutes before any
+#                    demo so the instance is already warm. An external uptime
+#                    pinger also works, at the cost of burning free instance
+#                    hours.
+#
+#                    To switch to a paid, always-on instance later, change this
+#                    to `starter` ($7/month, billed per second) - but only with
+#                    a deliberate decision to accept charges after credits run
+#                    out.
 #
 #   region           Singapore is the closest Render region to Indian users.
 #
@@ -26,7 +42,7 @@ services:
   - type: web
     name: rakshapay-web
     runtime: node
-    plan: starter
+    plan: free
     region: singapore
     rootDir: web
     # npm ci rather than npm install: it installs exactly package-lock.json, so

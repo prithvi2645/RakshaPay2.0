@@ -405,9 +405,21 @@ scoring is entirely local. Only the community layer goes quiet, and each surface
 plainly — the API answers `503 backend_unconfigured` rather than returning empty data that
 would read as "nothing reported".
 
-**Deploying to Vercel:** import the repository, set **Root Directory** to `web`, and add
-`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_KEY` as environment variables. The
-build command and output are Next.js defaults; no other configuration is needed.
+**Deploying to Render** (the configured target): dashboard → **New → Blueprint** → pick this
+repository → branch `main`. `render.yaml` at the repository root configures everything
+except the two Supabase values, which Render prompts for and stores as secrets rather than
+reading from the file.
+
+It deploys as a **Web Service, not a Static Site** — a static export would silently drop all
+four `/api/v1/*` routes — and on the **free** plan, which cannot bill. The trade-off is that
+a free service spins down after ~15 minutes idle and takes 30–60s to answer the next
+request, so open the URL a few minutes before any demo. Render has no hard spend cap, so a
+paid instance would keep charging once promotional credits ran out; `plan: free` is the only
+setting that guarantees otherwise.
+
+**Deploying to Vercel** instead: import the repository, set **Root Directory** to `web`, and
+add the same two environment variables. You may also need to enable *"Include source files
+outside of the Root Directory"*, because the build copies the models from `app/assets/models`.
 
 ---
 
