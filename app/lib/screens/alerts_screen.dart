@@ -14,14 +14,30 @@ enum _Filter { all, highRisk, caution, messages }
 
 class AlertsScreen extends StatefulWidget {
   final ScanHistoryService history;
-  const AlertsScreen({super.key, required this.history});
+
+  /// Which filter to open on. Set to `messages` after an inbox check, so the
+  /// user lands on the results they just asked for instead of on a mixed list
+  /// they have to filter themselves.
+  final bool openOnMessages;
+
+  const AlertsScreen({super.key, required this.history, this.openOnMessages = false});
 
   @override
   State<AlertsScreen> createState() => _AlertsScreenState();
 }
 
 class _AlertsScreenState extends State<AlertsScreen> {
-  _Filter _filter = _Filter.all;
+  late _Filter _filter = widget.openOnMessages ? _Filter.messages : _Filter.all;
+
+  @override
+  void didUpdateWidget(AlertsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The tab is kept alive in an IndexedStack, so a fresh scan has to be able
+    // to move the filter on an already-built screen.
+    if (widget.openOnMessages && !oldWidget.openOnMessages) {
+      _filter = _Filter.messages;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

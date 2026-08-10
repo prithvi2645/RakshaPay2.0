@@ -7,6 +7,7 @@ import '../services/scan_history_service.dart';
 import '../services/sms_monitor_service.dart';
 import '../theme/app_theme.dart';
 import 'alerts_screen.dart';
+import 'link_check_screen.dart';
 import 'manual_check_screen.dart';
 import 'report_scam_screen.dart';
 import 'scan_screen.dart';
@@ -30,7 +31,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
 
+  /// Set when an inbox check has just run, so the Alerts tab opens on the
+  /// Messages filter. Cleared as soon as the user moves elsewhere, so it does
+  /// not stick for the rest of the session.
+  bool _openAlertsOnMessages = false;
+
   void _refresh() => setState(() {});
+
+  /// Called after "Check my messages": go straight to the results.
+  void _showMessageResults() {
+    setState(() {
+      _openAlertsOnMessages = true;
+      _tab = 1;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,8 +54,10 @@ class _HomeScreenState extends State<HomeScreen> {
         history: widget.history,
         smsMonitor: widget.smsMonitor,
         onChanged: _refresh,
+        onMessagesChecked: _showMessageResults,
+        onViewAlerts: () => setState(() => _tab = 1),
       ),
-      AlertsScreen(history: widget.history),
+      AlertsScreen(history: widget.history, openOnMessages: _openAlertsOnMessages),
       const SizedBox.shrink(), // scan handled via push, not a tab body
       SettingsScreen(
         engine: widget.engine,
@@ -56,6 +72,8 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) async {
+          // Any deliberate navigation clears the one-shot Messages jump.
+          if (_openAlertsOnMessages) _openAlertsOnMessages = false;
           if (i == 2) {
             await Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => ScanScreen(engine: widget.engine, history: widget.history),
@@ -89,11 +107,15 @@ class _HomeTab extends StatefulWidget {
   final ScanHistoryService history;
   final SmsMonitorService smsMonitor;
   final VoidCallback onChanged;
+  final VoidCallback onMessagesChecked;
+  final VoidCallback onViewAlerts;
   const _HomeTab({
     required this.engine,
     required this.history,
     required this.smsMonitor,
     required this.onChanged,
+    required this.onMessagesChecked,
+    required this.onViewAlerts,
   });
 
   @override
@@ -108,6 +130,30 @@ class _HomeTabState extends State<_HomeTab> {
   /// the app, not a preference they configure once.
   Future<void> _checkMessages() async {
     final messenger = ScaffoldMessenger.of(context);
+
+    // Android keeps a granted SMS permission granted, so without this the
+    // button would silently read the inbox on every later tap. Reading someone
+    //phone's messages should take an explicit yes each time, not a yes given
+    // once weeks ago to a system dialog.
+    final consented = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Check your messages?'),
+        content: const Text(
+          'RakshaPay will read the messages already on this phone and score each one here on the device.\n\n'
+          'No message is uploaded, and nothing is stored beyond a short preview of the ones worth flagging.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Check messages'),
+          ),
+        ],
+      ),
+    );
+
+    if (consented != true || !mounted) return;
     setState(() => _scanningMessages = true);
 
     try {
@@ -128,9 +174,12 @@ class _HomeTabState extends State<_HomeTab> {
       messenger.showSnackBar(SnackBar(
         content: Text(risky == 0
             ? 'Checked ${scored.length} messages — nothing suspicious found.'
-            : 'Checked ${scored.length} messages. $risky need${risky == 1 ? 's' : ''} attention — see Alerts.'),
-        duration: const Duration(seconds: 5),
+            : 'Checked ${scored.length} messages. $risky need${risky == 1 ? 's' : ''} attention.'),
+        duration: const Duration(seconds: 4),
       ));
+
+      // Straight to the results rather than leaving the user to find them.
+      if (scored.isNotEmpty) widget.onMessagesChecked();
     } catch (e) {
       if (!mounted) return;
       setState(() => _scanningMessages = false);
@@ -143,6 +192,7 @@ class _HomeTabState extends State<_HomeTab> {
     final engine = widget.engine;
     final history = widget.history;
     final onChanged = widget.onChanged;
+    final onViewAlerts = widget.onViewAlerts;
     final safety = 100 - (history.records.isEmpty ? 0 : (history.records.take(10).map((r) => r.score).reduce((a, b) => a + b) / history.records.take(10).length)).round();
 
     return SafeArea(
@@ -231,10 +281,32 @@ class _HomeTabState extends State<_HomeTab> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _ActionTile(
+                          icon: Icons.link,
+                          label: 'Check a Link',
+                          onTap: () => Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (_) => LinkCheckScreen(engine: engine)))
+                              .then((_) => onChanged()),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ActionTile(
                           icon: Icons.flag_outlined,
                           label: 'Report a Scam',
                           color: AppColors.danger,
                           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReportScamScreen(engine: engine))),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _ActionTile(
+                          icon: Icons.notifications_active_outlined,
+                          label: 'View Alerts',
+                          onTap: onViewAlerts,
                         ),
                       ),
                     ],
