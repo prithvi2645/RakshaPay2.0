@@ -90,6 +90,60 @@ The structural problem: **bank-side and NPCI systems act *after* authorization.*
 irreversible, so by the time fraud is detected, the money is gone. Nothing sits in the
 seconds *before* the PIN screen, across every UPI app, where the decision is actually made.
 
+### Pre-authorization is the only window that exists
+
+A UPI payment passes through three moments, and only one of them can still be stopped:
+
+| Moment | Who is watching | Can it be reversed? |
+|---|---|---|
+| **Before the PIN** — the user is looking at a QR, a payee, a message | **Nobody** | The payment has not happened |
+| At authorization — PIN entered, NPCI switches the transfer | Bank risk engines | Seconds, at best |
+| After settlement — money in the mule account | Fraud teams, cyber-cells, 1930 | **No.** UPI has no chargeback |
+
+Every existing defence lives in rows two and three. They are detection systems: they tell
+you a crime happened. By the time a bank flags a transfer, the money has usually moved
+through two or three mule accounts already.
+
+Row one is empty, and it is the only row where the money still belongs to the user. That
+gap is not a missing feature in any one bank's app — it is architectural. A bank can only
+see its own customers' transfers, and it only sees them once they are submitted. Nobody is
+positioned to look at the QR *before* it is scanned, or at the SMS *before* it is believed.
+
+RakshaPay occupies row one, deliberately and exclusively. It does not process payments,
+hold funds, or compete with a bank's fraud engine. It answers one question in the ten
+seconds those systems cannot reach: **should you enter your PIN at all?**
+
+### Why the app has no cloud dependency
+
+**The app never needs a network to protect you, and that is a requirement, not an
+optimisation.**
+
+The users most exposed to UPI fraud are the ones least likely to have a working connection
+at the moment of payment: people in rural and semi-urban areas, and first-time digital
+payment users who came online through UPI itself. Patchy 2G, a dead data pack, a basement
+shop with no signal — these are ordinary, and they are exactly when a scan still happens.
+
+A cloud-scored fraud check fails in all of those situations. It would fail silently, and it
+would fail for precisely the people the product exists for. So every model runs on the
+device:
+
+- **All three models are bundled in the APK** and score locally — no request, no round trip.
+- **It works in airplane mode.** There is no degraded offline mode; offline *is* the mode.
+- **No latency is added to a payment decision.** Nothing to wait for.
+- **The QR and the message never leave the phone**, because they are never sent anywhere.
+
+The network is used for exactly one optional thing: syncing the community scam list and
+submitting a report the user chose to file. `ScamDatabaseService` returns `null` when the
+backend is unreachable and every caller treats that as "use the local cache" — a failed
+sync can never block a verdict.
+
+**And when the answer is bad, the app speaks.** A high-risk verdict is read aloud in the
+user's own language — 12 are supported, from Hindi and Bengali to Kannada, Tamil and Urdu —
+at roughly half normal speed. That matters for the same users: a warning that has to be
+*read*, in English, on a small screen, in a hurry, is not a warning for a first-time user or
+someone who does not read English comfortably. Hearing "चेतावनी! धोखाधड़ी का बहुत बड़ा खतरा
+है। भुगतान न करें।" is.
+
 ---
 
 ## What makes this different
